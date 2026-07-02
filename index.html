@@ -191,6 +191,7 @@
 <script>
 /* Field set diselaraskan dengan Borang Pembekalan (KEW.PA-3 / Lampiran B) Cawangan Teknologi Maklumat */
 const JENIS_OPTIONS = ['Komputer Riba','Komputer Meja','Monitor','Pencetak','Projektor','Router / Switch','UPS','Telefon Pintar','Lain-lain'];
+const VENUE_OPTIONS = ['HQ MSN, Bukit Jalil','Kompleks Sukan MSN Setiawangsa','Kompleks Sukan MSN Kg. Pandan','Velodrom Basikal, Nilai','Kompleks Sukan Nilai','Kompleks Sukan MSN Asahan','Kompleks Sukan MSN Rompin','Kompleks Pelayaran, Langkawi','Akademi Mokhtar Dahari, Gambang'];
 const STATUS_OPTIONS = ['Aktif','Simpanan','Baik Pulih','Dilupuskan'];
 const STATUS_STYLE = {
   'Aktif':{bg:'var(--status-aktif-bg)', color:'var(--status-aktif)'},
@@ -272,6 +273,7 @@ let currentPage = 1;
 let searchTerm = '';
 let filterStatus = 'all';
 let filterJenis = 'all';
+let filterVenue = 'all';
 let reportMode = 'ringkasan';
 let editingId = null;
 
@@ -370,8 +372,9 @@ function getFiltered(){
   return assets.filter(a=>{
     if(filterStatus !== 'all' && a.status !== filterStatus) return false;
     if(filterJenis !== 'all' && a.jenisPeralatan !== filterJenis) return false;
+    if(filterVenue !== 'all' && a.venue !== filterVenue) return false;
     if(searchTerm){
-      const hay = [a.noAset,a.noSiri,a.namaPengguna,a.jenama,a.model,a.bahagian,a.syarikatPembekal,a.noBaucar,a.jenisLain].join(' ').toLowerCase();
+      const hay = [a.noAset,a.noSiri,a.namaPengguna,a.jenama,a.model,a.bahagian,a.venue,a.syarikatPembekal,a.noBaucar,a.jenisLain].join(' ').toLowerCase();
       if(!hay.includes(searchTerm.toLowerCase())) return false;
     }
     return true;
@@ -385,6 +388,7 @@ function renderList(){
   const pageItems = filtered.slice((currentPage-1)*PAGE_SIZE, currentPage*PAGE_SIZE);
 
   const jenisOptionsHtml = JENIS_OPTIONS.map(j=>`<option value="${j}" ${filterJenis===j?'selected':''}>${j}</option>`).join('');
+  const venueOptionsHtml = VENUE_OPTIONS.map(v=>`<option value="${v}" ${filterVenue===v?'selected':''}>${v}</option>`).join('');
   const statusOptionsHtml = STATUS_OPTIONS.map(s=>`<option value="${s}" ${filterStatus===s?'selected':''}>${s}</option>`).join('');
 
   let tableBody;
@@ -433,6 +437,7 @@ function renderList(){
         <input type="text" id="searchInput" placeholder="Cari no. aset, no. siri, nama, bahagian, pembekal..." value="${escapeHtml(searchTerm)}">
       </div>
       <select id="filterJenis"><option value="all">Semua jenis</option>${jenisOptionsHtml}</select>
+      <select id="filterVenue"><option value="all">Semua venue</option>${venueOptionsHtml}</select>
       <select id="filterStatus"><option value="all">Semua status</option>${statusOptionsHtml}</select>
     </div>
     <div class="table-wrap">${tableBody}</div>
@@ -534,7 +539,7 @@ function renderReport(){
 
 function openForm(asset){
   editingId = asset ? asset.id : null;
-  const a = asset || {noAset:'',noSiri:'',jenisPeralatan:JENIS_OPTIONS[0],jenama:'',model:'',namaPengguna:'',bahagian:'',syarikatPembekal:'',hargaPerolehan:'',tarikhTerima:'',noBaucar:'',status:'Aktif',catatan:''};
+  const a = asset || {noAset:'',noSiri:'',jenisPeralatan:JENIS_OPTIONS[0],jenama:'',model:'',namaPengguna:'',bahagian:'',venue:'',syarikatPembekal:'',hargaPerolehan:'',tarikhTerima:'',noBaucar:'',status:'Aktif',catatan:''};
   const overlay = document.createElement('div');
   overlay.className = 'overlay';
   overlay.id = 'formOverlay';
@@ -563,6 +568,12 @@ function openForm(asset){
           <div class="form-section-label">Butiran pengguna</div>
           <div class="field"><label>Nama Pengguna *</label><input type="text" name="namaPengguna" required value="${escapeHtml(a.namaPengguna)}"></div>
           <div class="field"><label>Bahagian</label><input type="text" name="bahagian" value="${escapeHtml(a.bahagian)}"></div>
+          <div class="field full"><label>Venue</label>
+            <select name="venue">
+              <option value="" ${!a.venue?'selected':''}>-- Pilih Venue --</option>
+              ${VENUE_OPTIONS.map(v=>`<option value="${v}" ${a.venue===v?'selected':''}>${v}</option>`).join('')}
+            </select>
+          </div>
 
           <div class="form-section-label">Butiran perolehan</div>
           <div class="field"><label>Nama Syarikat Pembekal</label><input type="text" name="syarikatPembekal" value="${escapeHtml(a.syarikatPembekal)}"></div>
@@ -641,8 +652,8 @@ async function deleteAsset(id){
 }
 
 function exportCSV(){
-  const headers = ['No. Aset','No Casis/Siri Pembuat','Jenis (Kategori)','Jenama','Model','Nama Pengguna','Bahagian','Nama Syarikat Pembekal','Harga Perolehan Asal (RM)','No. Baucar','Tarikh Diterima','Status','Catatan'];
-  const rows = assets.map(a => [a.noAset,a.noSiri,jenisLabel(a),a.jenama,a.model,a.namaPengguna,a.bahagian,a.syarikatPembekal,a.hargaPerolehan,a.noBaucar,a.tarikhTerima,a.status,a.catatan]);
+  const headers = ['No. Aset','No Casis/Siri Pembuat','Jenis (Kategori)','Jenama','Model','Nama Pengguna','Bahagian','Venue','Nama Syarikat Pembekal','Harga Perolehan Asal (RM)','No. Baucar','Tarikh Diterima','Status','Catatan'];
+  const rows = assets.map(a => [a.noAset,a.noSiri,jenisLabel(a),a.jenama,a.model,a.namaPengguna,a.bahagian,a.venue,a.syarikatPembekal,a.hargaPerolehan,a.noBaucar,a.tarikhTerima,a.status,a.catatan]);
   const csvContent = [headers, ...rows].map(row =>
     row.map(cell => `"${(cell||'').toString().replace(/"/g,'""')}"`).join(',')
   ).join('\n');
@@ -660,23 +671,11 @@ function exportCSV(){
 
 function printBorang(a){
   if(!a) return;
-  const jenis = jenisLabel(a) || '-';
-  const rows = [
-    ['Nama Pengguna', a.namaPengguna || ''],
-    ['Bahagian', a.bahagian || ''],
-    ['Jenis (Kategori)', jenis],
-    ['Jenama', a.jenama || ''],
-    ['Model', a.model || ''],
-    ['No Casis/ Siri Pembuat', a.noSiri || ''],
-    ['Nama Syarikat Pembekal', a.syarikatPembekal || ''],
-    ['Harga Perolehan Asal (RM)', a.hargaPerolehan ? fmtRM(a.hargaPerolehan) : ''],
-    ['Tarikh Diterima', fmtDate(a.tarikhTerima)],
-    ['No. Baucar', a.noBaucar || ''],
-    ['No. Aset', a.noAset || '']
-  ];
-  const sigBlock = (label) => `
+  const jenis = jenisLabel(a) || '';
+  const sigBox = (label) => `
     <div class="sig-box">
-      <div class="sig-line">………………………………</div>
+      <div class="sig-pen-space"></div>
+      <div class="sig-line">………………………………..</div>
       <div class="sig-title">*${label}</div>
       <div class="sig-row"><span>Nama</span><span>:</span></div>
       <div class="sig-row"><span>Jawatan</span><span>:</span></div>
@@ -685,72 +684,89 @@ function printBorang(a){
     </div>`;
   const html = `<!DOCTYPE html><html lang="ms"><head><meta charset="UTF-8"><title>Borang Pembekalan - ${escapeHtml(a.noAset||'')}</title>
   <style>
-    body{font-family:Arial,Helvetica,sans-serif; font-size:13px; color:#111; max-width:800px; margin:24px auto; padding:0 16px;}
-    .doc-title{text-align:center; font-weight:bold; font-size:15px; margin-bottom:2px;}
-    .doc-sub{text-align:center; font-size:13px; margin-bottom:20px;}
-    table.info{width:100%; border-collapse:collapse; margin-bottom:0;}
-    table.info td{border:1px solid #000; padding:6px 8px; vertical-align:top;}
-    table.info td.label{width:45%; font-weight:normal;}
-    .layout{display:flex; gap:0; border:1px solid #000; border-top:none;}
-    .layout .left{flex:1.3; border-right:1px solid #000;}
-    .layout .left table{width:100%; border-collapse:collapse;}
-    .layout .left td{border:1px solid #000; border-top:none; border-left:none; padding:6px 8px; font-size:12.5px;}
-    .layout .left tr:first-child td{border-top:none;}
-    .decl{padding:10px 10px; font-size:11.5px; line-height:1.5;}
-    .decl b{display:block; margin-bottom:6px;}
-    .decl ul{margin:0; padding-left:16px;}
-    .decl li{margin-bottom:8px;}
-    .layout .right{flex:1; display:flex; flex-direction:column;}
-    .sig-box{border-bottom:1px solid #000; padding:14px 10px; flex:1; display:flex; flex-direction:column; justify-content:center;}
-    .sig-box:last-child{border-bottom:none;}
-    .sig-line{text-align:center; margin-bottom:2px; letter-spacing:1px;}
-    .sig-title{text-align:center; font-size:11.5px; margin-bottom:8px;}
-    .sig-row{display:flex; font-size:12px; margin-bottom:3px;}
-    .sig-row span:first-child{width:55px;}
+    * { box-sizing: border-box; }
+    @page { size: A4; margin: 10mm; }
+    body{font-family:Arial,Helvetica,sans-serif; font-size:10px; color:#000; max-width:190mm; margin:10px auto; padding:0 10px;}
+    .letterhead{display:flex; align-items:center; gap:10px; margin-bottom:8px;}
+    .letterhead img{height:52px; width:52px; object-fit:contain; flex-shrink:0;}
+    .letterhead .titles{flex:1; text-align:center; padding-right:52px;}
+    .doc-title{font-weight:bold; font-size:13px; margin-bottom:1px;}
+    .doc-sub{font-size:11px;}
+    table.borang{width:100%; border-collapse:collapse; border:1px solid #000; border-bottom:none;}
+    table.borang td{border:1px solid #000; border-bottom:none; padding:3px 6px; vertical-align:top; font-size:10px;}
+    table.borang tr:first-child td{border-top:none;}
+    table.borang td.lbl{width:34%;}
+    table.borang td.val{width:66%;}
+    .lower-section{display:flex; border:1px solid #000; align-items:stretch;}
+    .decl{flex:1.6; padding:8px 10px; font-size:9.5px; line-height:1.5; border-right:1px solid #000; display:flex; flex-direction:column; justify-content:space-between;}
+    .decl-title{font-weight:bold; margin-bottom:2px;}
+    .decl p{margin:0;}
+    .decl b{font-weight:bold;}
+    .sig-column{flex:1; display:flex; flex-direction:column;}
+    .sig-box{flex:1; padding:6px 6px; text-align:left; display:flex; flex-direction:column; justify-content:center; border-bottom:1px solid #000;}
+    .sig-column .sig-box:last-child{border-bottom:none;}
+    .sig-pen-space{height:22px;}
+    .sig-line{text-align:center; letter-spacing:1px; margin-bottom:1px;}
+    .sig-title{text-align:center; font-size:9px; margin-bottom:6px;}
+    .sig-row{display:flex; font-size:9.5px; margin-bottom:1.5px;}
+    .sig-row span:first-child{width:46px;}
     .pemulangan{border:1px solid #000; border-top:none;}
-    .pemulangan-title{background:#ccc; text-align:center; font-weight:bold; padding:5px; border-bottom:1px solid #000;}
+    .pemulangan-title{background:#bfbfbf; text-align:center; font-weight:bold; padding:3px; border-bottom:1px solid #000; font-size:10.5px;}
     .pemulangan-grid{display:flex;}
-    .pemulangan-grid > div{flex:1; padding:14px 12px;}
+    .pemulangan-grid > div{flex:1; padding:6px 10px;}
     .pemulangan-grid > div:first-child{border-right:1px solid #000;}
-    .print-bar{text-align:center; margin-bottom:16px;}
+    .pemulangan .sig-pen-space{height:22px;}
+    .pemulangan .sig-line{text-align:left; margin-top:2px;}
+    .pemulangan .sig-title{text-align:left;}
+    .print-bar{text-align:center; margin-bottom:12px;}
     .print-bar button{padding:8px 18px; font-size:13px; cursor:pointer;}
-    @media print{ .print-bar{display:none;} body{margin:0; padding:0 10px;} }
+    @media print{ .print-bar{display:none;} body{margin:0; padding:0;} }
   </style></head>
   <body>
     <div class="print-bar"><button onclick="window.print()">Cetak / Simpan sebagai PDF</button></div>
-    <div style="text-align:center; margin-bottom:8px;"><img src="${MSN_LOGO}" alt="Logo MSN" style="height:90px;"></div>
-    <div class="doc-title">BORANG PEMBEKALAN</div>
-    <div class="doc-sub">CAWANGAN TEKNOLOGI MAKLUMAT</div>
-    <div class="layout">
-      <div class="left">
-        <table>
-          ${rows.map(([label,val]) => `<tr><td style="width:45%;">${escapeHtml(label)}</td><td>${escapeHtml(val)}</td></tr>`).join('')}
-          <tr><td colspan="2">
-            <div class="decl">
-              <b>SAYA DENGAN INI BERSETUJU UNTUK:</b>
-              <ul>
-                <li><b>Perakuan Penerimaan:</b> Mengesahkan peralatan telah diterima seperti butiran di atas.</li>
-                <li><b>Menjaga Keselamatan Aset:</b> Memastikan peralatan sentiasa selamat di bawah kawalan saya dan akur kepada tindakan yang berkuatkuasa sekiranya berlaku kecurian, penipuan atau kecuaian.</li>
-                <li><b>Pemulangan Aset:</b> Menyerahkan semula peralatan kepada pihak Pengurusan Maklumat sekiranya tamat perkhidmatan.</li>
-                <li><b>Pertukaran Tempat Bertugas:</b> Memaklumkan Pegawai Aset dan Pegawai Keselamatan ICT untuk kemas kini rekod jika bertukar tempat kerja.</li>
-                <li><b>Hak Penarikan Balik:</b> Mengakui hak organisasi untuk menarik balik peralatan sekiranya berlaku pelanggaran dasar keselamatan ICT yang berkuatkuasa.</li>
-                <li><b>Laporan Kehilangan:</b> Melaporkan sebarang kehilangan, kecurian atau kerosakan kepada Pegawai Aset/ICT dalam tempoh 24 jam selepas mengetahui kejadian.</li>
-              </ul>
-            </div>
-          </td></tr>
-        </table>
+    <div class="letterhead">
+      <img src="${MSN_LOGO}" alt="Logo MSN">
+      <div class="titles">
+        <div class="doc-title">BORANG PEMBEKALAN</div>
+        <div class="doc-sub">CAWANGAN TEKNOLOGI MAKLUMAT</div>
       </div>
-      <div class="right">
-        ${sigBlock('Tandatangan ICTSO')}
-        ${sigBlock('Tandatangan Penerima')}
-        ${sigBlock('Tandatangan Pegawai Aset')}
+    </div>
+    <table class="borang">
+      <tr><td class="lbl">Nama Pengguna</td><td class="val">${escapeHtml(a.namaPengguna||'')}</td></tr>
+      <tr><td class="lbl">Bahagian</td><td class="val">${escapeHtml(a.bahagian||'')}</td></tr>
+      <tr><td class="lbl">Venue</td><td class="val">${escapeHtml(a.venue||'')}</td></tr>
+      <tr><td class="lbl">Jenis (Kategori)</td><td class="val">${escapeHtml(jenis)}</td></tr>
+      <tr><td class="lbl">Jenama</td><td class="val">${escapeHtml(a.jenama||'')}</td></tr>
+      <tr><td class="lbl">Model</td><td class="val">${escapeHtml(a.model||'')}</td></tr>
+      <tr><td class="lbl">No Casis/ Siri Pembuat</td><td class="val">${escapeHtml(a.noSiri||'')}</td></tr>
+      <tr><td class="lbl">Nama Syarikat Pembekal</td><td class="val">${escapeHtml(a.syarikatPembekal||'')}</td></tr>
+      <tr><td class="lbl">Harga Perolehan Asal (RM)</td><td class="val">${a.hargaPerolehan ? fmtRM(a.hargaPerolehan) : ''}</td></tr>
+      <tr><td class="lbl">Tarikh Diterima</td><td class="val">${fmtDate(a.tarikhTerima)}</td></tr>
+      <tr><td class="lbl">No. Baucar</td><td class="val">${escapeHtml(a.noBaucar||'')}</td></tr>
+      <tr><td class="lbl">No. Aset</td><td class="val">${escapeHtml(a.noAset||'')}</td></tr>
+    </table>
+    <div class="lower-section">
+      <div class="decl">
+        <div class="decl-title">SAYA DENGAN INI BERSETUJU UNTUK:</div>
+        <p><b>Perakuan Penerimaan:</b> Memperakui bahawa peralatan telah diterima seperti yang dinyatakan di dalam dokumen ini.</p>
+        <p><b>Menjaga Keselamatan Aset:</b> Memastikan peralatan sentiasa selamat di bawah kawalan saya, serta akur kepada tindakan bayaran balik, surcaj, tatatertib atau tindakan lain mengikut peraturan Kerajaan yang berkuatkuasa jika berlaku kecurian, penipuan, atau kecuaian.</p>
+        <p><b>Pemulangan Aset:</b> Menyerahkan semula peralatan kepada Cawangan Pengurusan Maklumat MSN sekiranya saya tamat berkhidmat di MSN.</p>
+        <p><b>Pertukaran Tempat Bertugas:</b> Memaklumkan Pegawai Aset MSN dan Pegawai Keselamatan ICT (ICTSO) untuk kemas kini rekod jika saya bertukar tempat kerja.</p>
+        <p><b>Hak Penarikan Balik:</b> Mengakui hak MSN untuk menarik balik peralatan sekiranya saya melanggar Dasar Keselamatan ICT Kerajaan (Pekeliling Am Bil. 3/2000) dan Dasar Keselamatan ICT MSNM Versi 4/2024 (Para 030101 – Inventori Aset).</p>
+        <p><b>Laporan Kehilangan:</b> Saya akan melaporkan kehilangan, kecurian atau kerosakan kepada Pegawai Aset / ICT dalam tempoh 24 Jam selepas mengetahui kejadian tersebut.</p>
+      </div>
+      <div class="sig-column">
+        ${sigBox('Tandatangan ICTSO')}
+        ${sigBox('Tandatangan Penerima')}
+        ${sigBox('Tandatangan Pegawai Aset')}
       </div>
     </div>
     <div class="pemulangan">
       <div class="pemulangan-title">PEMULANGAN</div>
       <div class="pemulangan-grid">
         <div>
-          <div class="sig-line">………………………………</div>
+          <div class="sig-pen-space"></div>
+          <div class="sig-line">………………………………..</div>
           <div class="sig-title">*Tandatangan Pengguna</div>
           <div class="sig-row"><span>Nama</span><span>:</span></div>
           <div class="sig-row"><span>Jawatan</span><span>:</span></div>
@@ -758,8 +774,9 @@ function printBorang(a){
           <div class="sig-row"><span>Cop</span><span>:</span></div>
         </div>
         <div>
-          <div style="font-style:italic; margin-bottom:8px;">Pengesahan CTM :</div>
-          <div class="sig-line">………………………………</div>
+          <div style="font-style:italic; margin-bottom:4px;">Pengesahan CTM :</div>
+          <div class="sig-pen-space"></div>
+          <div class="sig-line">………………………………..</div>
           <div class="sig-title">*Tandatangan</div>
           <div class="sig-row"><span>Nama</span><span>:</span></div>
           <div class="sig-row"><span>Jawatan</span><span>:</span></div>
@@ -792,10 +809,22 @@ function attachViewHandlers(){
 
   const searchInput = document.getElementById('searchInput');
   if(searchInput){
-    searchInput.oninput = () => { searchTerm = searchInput.value; currentPage = 1; render(); searchInput.focus(); searchInput.setSelectionRange(searchInput.value.length, searchInput.value.length); };
+    searchInput.oninput = () => {
+      const cursorPos = searchInput.selectionStart;
+      searchTerm = searchInput.value;
+      currentPage = 1;
+      render();
+      const newInput = document.getElementById('searchInput');
+      if(newInput){
+        newInput.focus();
+        newInput.setSelectionRange(cursorPos, cursorPos);
+      }
+    };
   }
   const fJenis = document.getElementById('filterJenis');
   if(fJenis) fJenis.onchange = () => { filterJenis = fJenis.value; currentPage = 1; render(); };
+  const fVenue = document.getElementById('filterVenue');
+  if(fVenue) fVenue.onchange = () => { filterVenue = fVenue.value; currentPage = 1; render(); };
   const fStatus = document.getElementById('filterStatus');
   if(fStatus) fStatus.onchange = () => { filterStatus = fStatus.value; currentPage = 1; render(); };
 
