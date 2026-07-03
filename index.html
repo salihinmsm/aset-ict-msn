@@ -869,6 +869,9 @@ function initSignaturePad(canvas){
   }
   function start(e){
     e.preventDefault();
+    if(document.activeElement && document.activeElement !== document.body && document.activeElement.blur){
+      document.activeElement.blur();
+    }
     drawing = true;
     hasSignature = true;
     const p = getPos(e);
