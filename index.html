@@ -243,6 +243,26 @@
     #scanner-modal{display:none !important;}
   }
 
+  #asset-preview-modal{position:fixed; inset:0; background:rgba(11,11,18,0.9); display:none; z-index:998; overflow-y:auto; padding:16px;}
+  #asset-preview-modal.active{display:flex; align-items:flex-start; justify-content:center; padding-top:20px;}
+  #asset-preview-content{background:var(--surface); border:1px solid rgba(139,92,246,0.32); border-radius:12px; padding:24px; width:100%; max-width:500px; box-shadow:0 10px 34px -18px rgba(139,92,246,0.5);}
+  .preview-header{display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; padding-bottom:16px; border-bottom:1px solid var(--line);}
+  .preview-title{font-size:18px; font-weight:600; color:var(--ink);}
+  .preview-close{background:none; border:none; cursor:pointer; color:var(--ink-soft); font-size:24px; padding:0; width:28px; height:28px; display:flex; align-items:center; justify-content:center;}
+  .preview-close:hover{color:var(--ink);}
+  .preview-row{display:flex; padding:12px 0; border-bottom:1px solid var(--line);}
+  .preview-row:last-child{border-bottom:none;}
+  .preview-label{width:40%; font-size:13px; color:var(--ink-soft); font-weight:500;}
+  .preview-value{width:60%; font-size:13px; color:var(--ink); word-break:break-word;}
+  .preview-actions{display:flex; gap:8px; margin-top:20px; padding-top:16px; border-top:1px solid var(--line);}
+  .preview-actions button{flex:1; padding:10px 16px; border-radius:8px; border:1px solid var(--line); background:var(--surface-2); color:var(--ink); cursor:pointer; font-size:13px; font-weight:500;}
+  .preview-actions .btn-primary{background:var(--accent); border-color:var(--accent); color:var(--accent-ink);}
+  .preview-actions button:hover{opacity:0.8;}
+  @media (min-width:900px){
+    #asset-preview-modal{padding:40px;}
+    #asset-preview-content{max-width:600px;}
+  }
+
   /* Glowing purple/pink gradient border ring for cards */
   .panel, .metric-card, .modal, .glow-card{position:relative; isolation:isolate;}
   .panel::before, .metric-card::before, .modal::before, .glow-card::before{
@@ -416,6 +436,86 @@ function isMobileDevice(){
   const isIOS = /iPad|iPhone|iPod/.test(userAgent) && !window.MSStream;
   const isTouchDevice = () => (('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0));
   return isAndroid || isIOS || isTouchDevice();
+}
+
+/* Asset Preview Modal */
+let previewAsset = null;
+
+function openAssetPreview(assetId){
+  const asset = assets.find(a => a.id === assetId);
+  if(!asset) return;
+  
+  previewAsset = asset;
+  const modal = document.getElementById('asset-preview-modal');
+  modal.classList.add('active');
+  
+  const jenis = jenisLabel(asset) || '';
+  const previewHtml = `
+    <div class="preview-row">
+      <div class="preview-label">No. Aset</div>
+      <div class="preview-value">${escapeHtml(asset.noAset||'-')}</div>
+    </div>
+    <div class="preview-row">
+      <div class="preview-label">No. Siri</div>
+      <div class="preview-value">${escapeHtml(asset.noSiri||'-')}</div>
+    </div>
+    <div class="preview-row">
+      <div class="preview-label">Jenis</div>
+      <div class="preview-value">${escapeHtml(jenis)}</div>
+    </div>
+    <div class="preview-row">
+      <div class="preview-label">Jenama</div>
+      <div class="preview-value">${escapeHtml(asset.jenama||'-')}</div>
+    </div>
+    <div class="preview-row">
+      <div class="preview-label">Model</div>
+      <div class="preview-value">${escapeHtml(asset.model||'-')}</div>
+    </div>
+    <div class="preview-row">
+      <div class="preview-label">Nama Pengguna</div>
+      <div class="preview-value">${escapeHtml(asset.namaPengguna||'-')}</div>
+    </div>
+    <div class="preview-row">
+      <div class="preview-label">Bahagian</div>
+      <div class="preview-value">${escapeHtml(asset.bahagian||'-')}</div>
+    </div>
+    <div class="preview-row">
+      <div class="preview-label">Venue</div>
+      <div class="preview-value">${escapeHtml(asset.venue||'-')}</div>
+    </div>
+    <div class="preview-row">
+      <div class="preview-label">Syarikat Pembekal</div>
+      <div class="preview-value">${escapeHtml(asset.syarikatPembekal||'-')}</div>
+    </div>
+    <div class="preview-row">
+      <div class="preview-label">Harga (RM)</div>
+      <div class="preview-value">${asset.hargaPerolehan ? fmtRM(asset.hargaPerolehan) : '-'}</div>
+    </div>
+    <div class="preview-row">
+      <div class="preview-label">Tarikh Diterima</div>
+      <div class="preview-value">${fmtDate(asset.tarikhTerima)}</div>
+    </div>
+    <div class="preview-row">
+      <div class="preview-label">No. Baucar</div>
+      <div class="preview-value">${escapeHtml(asset.noBaucar||'-')}</div>
+    </div>
+    <div class="preview-row">
+      <div class="preview-label">Status</div>
+      <div class="preview-value">${escapeHtml(asset.status||'-')}</div>
+    </div>
+  `;
+  
+  document.getElementById('preview-body').innerHTML = previewHtml;
+  document.getElementById('previewPrintBtn').onclick = () => {
+    closeAssetPreview();
+    printBorang(asset);
+  };
+}
+
+function closeAssetPreview(){
+  const modal = document.getElementById('asset-preview-modal');
+  modal.classList.remove('active');
+  previewAsset = null;
 }
 
 /* Field set diselaraskan dengan Borang Pembekalan (KEW.PA-3 / Lampiran B) Cawangan Teknologi Maklumat */
@@ -720,7 +820,7 @@ function renderList(){
         ${pageItems.map(a=>{
           const st = STATUS_STYLE[a.status] || STATUS_STYLE['Aktif'];
           return `<tr>
-            <td><span class="asset-tag">${escapeHtml(a.noAset||'-')}</span></td>
+            <td><span class="asset-tag" style="cursor:pointer; transition:opacity 0.2s;" onclick="openAssetPreview('${a.id}')" onmouseover="this.style.opacity='0.7'" onmouseout="this.style.opacity='1'" title="Klik untuk preview">${escapeHtml(a.noAset||'-')}</span></td>
             <td><div class="cell-name">${escapeHtml(a.namaPengguna||'-')}</div></td>
             <td><div>${escapeHtml(jenisLabel(a)||'-')}</div><div class="cell-sub">${escapeHtml(a.jenama||'-')} ${escapeHtml(a.model||'')}</div></td>
             <td class="mono">${escapeHtml(a.noSiri||'-')}</td>
@@ -2024,6 +2124,14 @@ function attachViewHandlers(){
   document.querySelectorAll('[data-print]').forEach(btn=>{
     btn.onclick = () => printBorang(assets.find(x=>x.id===btn.dataset.print));
   });
+  
+  const assetPreviewModal = document.getElementById('asset-preview-modal');
+  if(assetPreviewModal){
+    assetPreviewModal.addEventListener('mousedown', (e) => {
+      if(e.target === assetPreviewModal) closeAssetPreview();
+    });
+  }
+  
   document.querySelectorAll('[data-edit]').forEach(btn=>{
     btn.onclick = () => { const a = assets.find(x=>x.id===btn.dataset.edit); openForm(a); };
   });
@@ -2088,6 +2196,20 @@ if('serviceWorker' in navigator){
   });
 }
 </script>
+<div id="asset-preview-modal">
+  <div id="asset-preview-content">
+    <div class="preview-header">
+      <div class="preview-title">Preview Aset</div>
+      <button class="preview-close" onclick="closeAssetPreview()" aria-label="Tutup">×</button>
+    </div>
+    <div id="preview-body"></div>
+    <div class="preview-actions">
+      <button onclick="closeAssetPreview()">Tutup</button>
+      <button class="btn-primary" id="previewPrintBtn">Cetak Borang Penuh</button>
+    </div>
+  </div>
+</div>
+
 <div id="scanner-modal">
   <div id="scanner-container">
     <div class="scanner-title">Scan Barcode</div>
