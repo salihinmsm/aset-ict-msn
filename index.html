@@ -357,7 +357,9 @@ let searchTerm = '';
 let filterStatus = 'all';
 let filterJenis = 'all';
 let filterVenue = 'all';
+let reportSection = 'aset';
 let reportMode = 'ringkasan';
+let maintReportMode = 'ringkasan';
 let editingId = null;
 
 function uid(){ return 'a_' + Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
@@ -544,7 +546,7 @@ function renderList(){
   `;
 }
 
-function renderReport(){
+function renderAssetReport(){
   if(assets.length === 0){
     return `<div class="panel empty-state"><h3>Tiada data untuk laporan</h3><p>Daftar sekurang-kurangnya satu aset dahulu.</p></div>`;
   }
@@ -651,6 +653,105 @@ function renderReport(){
   `;
 }
 
+function renderMaintenanceReport(){
+  if(maintenanceRecords.length === 0){
+    return `<div class="panel empty-state"><h3>Tiada data penyenggaraan untuk laporan</h3><p>Buat sekurang-kurangnya satu rekod penyenggaraan dahulu.</p></div>`;
+  }
+  const currentYear = new Date().getFullYear();
+  const thisYearRecords = maintenanceRecords.filter(m => m.tarikh && new Date(m.tarikh + 'T00:00:00').getFullYear() === currentYear);
+  const byVenueThisYear = {};
+  thisYearRecords.forEach(m => {
+    const v = m.lokasi || 'Tiada lokasi';
+    byVenueThisYear[v] = (byVenueThisYear[v]||0) + 1;
+  });
+  const maxVenueCount = Math.max(...Object.values(byVenueThisYear), 1);
+
+  const summaryBlock = `
+    <div class="toolbar no-print">
+      <button class="btn" id="btnExportMaintCsv">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+        Eksport CSV (Seluruh Rekod)
+      </button>
+    </div>
+    <div class="grid-metrics">
+      <div class="metric-card accent"><div class="label">Jumlah Penyenggaraan (${currentYear})</div><div class="value">${thisYearRecords.length}</div></div>
+      <div class="metric-card"><div class="label">Jumlah Keseluruhan Rekod</div><div class="value">${maintenanceRecords.length}</div></div>
+    </div>
+    <div class="panel">
+      <h3>Aset Disenggara Ikut Venue (${currentYear})</h3>
+      ${Object.keys(byVenueThisYear).length === 0
+        ? `<p style="font-size:13px; color:var(--ink-soft);">Tiada rekod penyenggaraan pada tahun ${currentYear}.</p>`
+        : Object.entries(byVenueThisYear).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div class="bar-row"><div class="bar-label" style="width:220px;">${escapeHtml(k)}</div><div class="bar-track"><div class="bar-fill" style="width:${(v/maxVenueCount*100).toFixed(0)}%"></div></div><div class="bar-count">${v}</div></div>`).join('')}
+    </div>
+  `;
+
+  const sortedAll = maintenanceRecords.slice().sort((a,b) => (b.tarikh||'').localeCompare(a.tarikh||''));
+  const detailBlock = `
+    <div class="toolbar no-print">
+      <button class="btn" id="btnExportMaintCsv2">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+        Eksport CSV (Seluruh Rekod)
+      </button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>Tarikh</th><th>No. Aset</th><th>Nama Pengguna</th><th>Lokasi</th><th>Jenis</th><th>Model</th><th>Juruteknik</th>
+        </tr></thead>
+        <tbody>
+        ${sortedAll.map(m => `<tr>
+          <td>${fmtDate(m.tarikh)}</td>
+          <td class="mono">${escapeHtml(m.noAset||'-')}</td>
+          <td>${escapeHtml(m.namaPengguna||'-')}</td>
+          <td>${escapeHtml(m.lokasi||'-')}</td>
+          <td>${escapeHtml(m.jenisPeralatan||'-')}</td>
+          <td>${escapeHtml(m.model||'-')}</td>
+          <td>${escapeHtml(m.juruteknikNama||'-')}</td>
+        </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+
+  return `
+    <div class="report-toggle no-print">
+      <button data-maintmode="ringkasan" class="${maintReportMode==='ringkasan'?'active':''}">Ringkasan</button>
+      <button data-maintmode="terperinci" class="${maintReportMode==='terperinci'?'active':''}">Terperinci</button>
+    </div>
+    ${maintReportMode === 'ringkasan' ? summaryBlock : detailBlock}
+  `;
+}
+
+function exportMaintenanceCSV(){
+  const headers = ['Tarikh','Masa','No. Aset','Nama Pengguna','Bahagian','Cawangan','Lokasi','Jenis Peralatan','Jenama','Model','No. Siri CPU','No. Siri Monitor','Juruteknik','Catatan'];
+  const rows = maintenanceRecords.slice().sort((a,b) => (a.tarikh||'').localeCompare(b.tarikh||'')).map(m => [
+    m.tarikh, m.masa, m.noAset, m.namaPengguna, m.bahagian, m.cawangan, m.lokasi, m.jenisPeralatan, m.jenama, m.model, m.noSiriCpu, m.noSiriMonitor, m.juruteknikNama, m.catatan
+  ]);
+  const csvContent = [headers, ...rows].map(row =>
+    row.map(cell => `"${(cell||'').toString().replace(/"/g,'""')}"`).join(',')
+  ).join('\n');
+  const blob = new Blob(['\uFEFF' + csvContent], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `laporan-penyenggaraan-${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+  showToast('Fail CSV dimuat turun.');
+}
+
+function renderReport(){
+  return `
+    <div class="report-toggle no-print" style="margin-bottom:20px;">
+      <button data-section="aset" class="${reportSection==='aset'?'active':''}">Laporan Daftar Aset</button>
+      <button data-section="penyenggaraan" class="${reportSection==='penyenggaraan'?'active':''}">Laporan Penyenggaraan</button>
+    </div>
+    ${reportSection === 'aset' ? renderAssetReport() : renderMaintenanceReport()}
+  `;
+}
+
 function getFilteredSortedMaintenance(){
   let list = maintenanceRecords.filter(m => {
     if(!maintSearchTerm) return true;
@@ -690,7 +791,7 @@ function renderMaintenance(){
     tableBody = `
     <table>
       <thead><tr>
-        <th>Tarikh</th><th>No. Aset</th><th>Pengguna</th><th>Lokasi</th><th>Jenis</th><th>Juruteknik</th><th></th>
+        <th>Tarikh</th><th>No. Aset</th><th>Pengguna</th><th>Lokasi</th><th>Jenis</th><th>Model</th><th>Juruteknik</th><th></th>
       </tr></thead>
       <tbody>
         ${pageItems.map(m=>`<tr>
@@ -699,6 +800,7 @@ function renderMaintenance(){
           <td>${escapeHtml(m.namaPengguna||'-')}</td>
           <td>${escapeHtml(m.lokasi||'-')}</td>
           <td>${escapeHtml(m.jenisPeralatan||'-')}</td>
+          <td>${escapeHtml(m.model||'-')}</td>
           <td>${escapeHtml(m.juruteknikNama||'-')}</td>
           <td><div class="row-actions">
             <button data-print-maint="${m.id}" title="Cetak Borang" aria-label="Cetak Borang"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></svg></button>
@@ -1630,13 +1732,21 @@ function attachViewHandlers(){
   if(pgNext) pgNext.onclick = () => { currentPage++; render(); };
 
   document.querySelectorAll('.report-toggle button').forEach(btn=>{
-    btn.onclick = () => { reportMode = btn.dataset.mode; render(); };
+    btn.onclick = () => {
+      if(btn.dataset.section){ reportSection = btn.dataset.section; }
+      else if(btn.dataset.maintmode){ maintReportMode = btn.dataset.maintmode; }
+      else if(btn.dataset.mode){ reportMode = btn.dataset.mode; }
+      render();
+    };
   });
 
   const btnExport = document.getElementById('btnExportCsv') || document.getElementById('btnExportCsv2');
   if(btnExport) btnExport.onclick = exportCSV;
   const btnPrint = document.getElementById('btnPrint') || document.getElementById('btnPrint2');
   if(btnPrint) btnPrint.onclick = () => window.print();
+
+  const btnExportMaint = document.getElementById('btnExportMaintCsv') || document.getElementById('btnExportMaintCsv2');
+  if(btnExportMaint) btnExportMaint.onclick = exportMaintenanceCSV;
 }
 
 document.querySelectorAll('.tab').forEach(tab=>{
