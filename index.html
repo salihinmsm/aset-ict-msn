@@ -78,7 +78,14 @@
   .brand{display:flex; align-items:center; gap:12px;}
   .brand-mark{width:40px; height:40px; border-radius:9px; background:var(--chip-bg); display:flex; align-items:center; justify-content:center; flex-shrink:0;}
   .brand-mark svg{width:22px; height:22px;}
-  .brand h1{font-size:20px; font-weight:600; color:var(--ink);}
+  .brand h1{
+    font-size:21px; font-weight:800; letter-spacing:-0.01em;
+    background:linear-gradient(100deg, var(--accent-dark) 0%, var(--accent) 35%, var(--secondary) 70%, var(--secondary-dark) 100%);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    -webkit-text-fill-color:transparent;
+    filter:drop-shadow(0 0 10px rgba(139,92,246,0.35));
+    text-transform:uppercase;
+  }
   .brand p{margin:2px 0 0; font-size:12.5px; color:var(--ink-soft);}
 
   nav{display:flex; gap:4px; border-bottom:1px solid var(--line); padding:0 20px; margin-top:6px; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none;}
@@ -120,12 +127,12 @@
   .btn-primary:hover{background:var(--accent-dark); border-color:var(--accent-dark);}
   .btn svg{width:15px; height:15px; flex-shrink:0;}
 
-  .table-wrap{background:var(--surface); border:1px solid var(--line); border-radius:12px; overflow:hidden; overflow-x:auto;}
+  .table-wrap{background:var(--surface); border:1px solid rgba(139,92,246,0.32); border-radius:12px; overflow:hidden; overflow-x:auto;}
   table{width:100%; border-collapse:collapse; font-size:13px;}
   th{text-align:left; padding:11px 14px; background:var(--bg); color:var(--ink-soft); font-weight:500; font-size:11px; text-transform:uppercase; letter-spacing:0.03em; border-bottom:1px solid var(--line); white-space:nowrap;}
   td{padding:11px 14px; border-bottom:1px solid var(--line); vertical-align:middle;}
   tr:last-child td{border-bottom:none;}
-  tr:hover td{background:#FAFBF9;}
+  tr:hover td{background:var(--surface-2);}
   .cell-name{font-weight:500;}
   .cell-sub{color:var(--ink-soft); font-size:12px;}
   .status-badge{display:inline-block; padding:3px 9px; border-radius:20px; font-size:11.5px; font-weight:500; white-space:nowrap;}
@@ -143,7 +150,7 @@
   .pagination button:disabled{color:var(--line-strong); cursor:default;}
 
   .overlay{position:fixed; inset:0; background:rgba(28,35,33,0.45); display:flex; align-items:flex-start; justify-content:center; padding:40px 16px; overflow-y:auto; z-index:50;}
-  .modal{background:var(--surface); border-radius:14px; width:100%; max-width:640px; padding:24px;}
+  .modal{background:var(--surface); border:1px solid rgba(139,92,246,0.32); border-radius:14px; width:100%; max-width:640px; padding:24px;}
   .modal-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;}
   .modal-head h3{font-size:17px;}
   .modal-head button{border:none; background:none; cursor:pointer; color:var(--ink-soft); padding:4px;}
@@ -155,6 +162,12 @@
   .field label{display:block; font-size:12.5px; color:var(--ink-soft); margin-bottom:5px; font-weight:500;}
   .field input, .field select, .field textarea{width:100%; border:1px solid var(--line); border-radius:8px; padding:9px 11px; outline:none; color:var(--ink); background:var(--surface);}
   .field input:focus, .field select:focus, .field textarea:focus{border-color:var(--accent);}
+  input[type="date"]{color-scheme:light;}
+  input[type="date"]::-webkit-calendar-picker-indicator{
+    filter:invert(29%) sepia(72%) saturate(3207%) hue-rotate(247deg) brightness(93%) contrast(101%);
+    cursor:pointer; border-radius:4px; padding:2px;
+  }
+  input[type="date"]::-webkit-calendar-picker-indicator:hover{opacity:0.75;}
   .field textarea{resize:vertical; min-height:60px; font-family:'Inter',sans-serif;}
   .modal-foot{display:flex; justify-content:flex-end; gap:10px; margin-top:20px;}
   .checklist-wrap{display:grid; grid-template-columns:1fr 1fr; gap:16px; background:var(--bg); padding:12px; border-radius:8px;}
@@ -211,18 +224,18 @@
   .theme-toggle-icon svg{width:100%; height:100%;}
 
   /* Glowing purple/pink gradient border ring for cards */
-  .panel, .metric-card, .modal, .glow-card{position:relative; isolation:isolate;}
-  .panel::before, .metric-card::before, .modal::before, .glow-card::before{
+  .panel, .metric-card, .modal, .glow-card, .table-wrap{position:relative; isolation:isolate;}
+  .panel::before, .metric-card::before, .modal::before, .glow-card::before, .table-wrap::before{
     content:''; position:absolute; inset:-1px; border-radius:inherit; padding:1px;
     background:linear-gradient(135deg, rgba(139,92,246,0.65), rgba(236,72,153,0.5) 55%, rgba(139,92,246,0.35));
     -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
     -webkit-mask-composite:xor; mask-composite:exclude;
     pointer-events:none;
   }
-  .panel, .metric-card, .modal, .glow-card{
+  .panel, .metric-card, .modal, .glow-card, .table-wrap{
     box-shadow:0 10px 34px -18px rgba(139,92,246,0.5), 0 6px 22px -14px rgba(236,72,153,0.32);
   }
-  .table-wrap{box-shadow:0 10px 34px -18px rgba(139,92,246,0.4), 0 6px 22px -14px rgba(236,72,153,0.25);}
+
 
   @media print{
     header, nav, .toolbar, .row-actions, th:last-child, td:last-child, .pagination, .no-print{display:none !important;}
@@ -246,7 +259,7 @@
 <div id="loginScreen" style="min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px;">
   <div class="glow-card" style="position:relative; background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:32px; width:100%; max-width:360px; text-align:center;">
     <button class="theme-toggle" onclick="toggleTheme()" title="Tukar tema" aria-label="Tukar tema" style="position:absolute; top:14px; right:14px;"><span class="theme-toggle-icon"></span></button>
-    <div class="brand-mark" id="loginLogoMark" style="margin:0 auto 16px;">
+    <div class="brand-mark" id="loginLogoMark" style="margin:0 auto 16px; width:92px; height:92px; background:transparent;">
       <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
     </div>
     <h1 style="font-size:18px; margin-bottom:4px;">Sistem Pengurusan Aset ICT</h1>
@@ -263,7 +276,7 @@
   <header>
     <div class="header-top">
       <div class="brand">
-        <div class="brand-mark" id="headerLogoMark">
+        <div class="brand-mark" id="headerLogoMark" style="width:54px; height:54px; background:transparent;">
           <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
         </div>
         <div>
@@ -402,8 +415,8 @@ function applyLogo(){
   const html = `<img src="${MSN_LOGO}" alt="Logo MSN" style="width:100%; height:100%; object-fit:contain;">`;
   const loginMark = document.getElementById('loginLogoMark');
   const headerMark = document.getElementById('headerLogoMark');
-  if(loginMark){ loginMark.style.background = '#fff'; loginMark.innerHTML = html; }
-  if(headerMark){ headerMark.style.background = '#fff'; headerMark.innerHTML = html; }
+  if(loginMark){ loginMark.style.background = 'transparent'; loginMark.innerHTML = html; }
+  if(headerMark){ headerMark.style.background = 'transparent'; headerMark.innerHTML = html; }
   const splashLogo = document.getElementById('splashLogoImg');
   if(splashLogo){ splashLogo.src = MSN_LOGO; }
 }
@@ -661,6 +674,10 @@ function renderList(){
       <select id="filterJenis"><option value="all">Semua jenis</option>${jenisOptionsHtml}</select>
       <select id="filterVenue"><option value="all">Semua venue</option>${venueOptionsHtml}</select>
       <select id="filterStatus"><option value="all">Semua status</option>${statusOptionsHtml}</select>
+      <button class="btn" id="btnPrintList">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></svg>
+        Borang Daftar Aset
+      </button>
     </div>
     <div class="table-wrap">${tableBody}</div>
   `;
@@ -685,10 +702,6 @@ function renderAssetReport(){
       <button class="btn" id="btnExportCsv">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
         Eksport CSV
-      </button>
-      <button class="btn" id="btnPrint">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></svg>
-        Cetak
       </button>
     </div>
     <div class="grid-metrics">
@@ -716,10 +729,6 @@ function renderAssetReport(){
       <button class="btn" id="btnExportCsv2">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
         Eksport CSV
-      </button>
-      <button class="btn" id="btnPrint2">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1-2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></svg>
-        Cetak
       </button>
     </div>
     <div class="table-wrap">
@@ -1019,6 +1028,91 @@ function initSignaturePad(canvas){
     isEmpty(){ return !hasSignature; },
     toDataURL(){ return hasSignature ? canvas.toDataURL('image/png') : ''; }
   };
+}
+
+function openBulkPrintAssetModal(){
+  const overlay = document.createElement('div');
+  overlay.className = 'overlay';
+  overlay.id = 'bulkPrintAssetOverlay';
+  const venueOptionsHtml = VENUE_OPTIONS.map(v=>`<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+  const jenisOptionsHtml = JENIS_OPTIONS.map(j=>`<option value="${escapeHtml(j)}">${escapeHtml(j)}</option>`).join('');
+  overlay.innerHTML = `
+    <div class="modal" style="max-width:420px;">
+      <div class="modal-head">
+        <h3>Cetak Pukal Borang Daftar Aset</h3>
+        <button id="closeBulkPrintAssetModal" aria-label="Tutup"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+      </div>
+      <div class="modal-sub">Pilih julat tarikh, Venue dan/atau Jenis (Kategori) untuk cetak beberapa borang sekali gus.</div>
+      <div class="form-grid">
+        <div class="field"><label>Tarikh Dari</label><input type="date" id="bulkAssetFrom"></div>
+        <div class="field"><label>Tarikh Hingga</label><input type="date" id="bulkAssetTo"></div>
+        <div class="field full">
+          <label>Venue</label>
+          <select id="bulkAssetVenue">
+            <option value="all">Semua Venue</option>
+            ${venueOptionsHtml}
+          </select>
+        </div>
+        <div class="field full">
+          <label>Jenis (Kategori)</label>
+          <select id="bulkAssetJenis">
+            <option value="all">Semua Jenis</option>
+            ${jenisOptionsHtml}
+          </select>
+        </div>
+      </div>
+      <div id="bulkAssetPreviewCount" style="font-size:12.5px; color:var(--ink-soft); margin-top:14px;"></div>
+      <div class="modal-foot">
+        <button type="button" class="btn" id="cancelBulkPrintAsset">Batal</button>
+        <button type="button" class="btn btn-primary" id="confirmBulkPrintAsset">Cetak</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  document.getElementById('closeBulkPrintAssetModal').onclick = closeBulkPrintAssetModal;
+  document.getElementById('cancelBulkPrintAsset').onclick = closeBulkPrintAssetModal;
+  let mouseDownOnBackdrop = false;
+  overlay.addEventListener('mousedown', e => { mouseDownOnBackdrop = (e.target === overlay); });
+  overlay.addEventListener('mouseup', e => { if(mouseDownOnBackdrop && e.target === overlay) closeBulkPrintAssetModal(); mouseDownOnBackdrop = false; });
+
+  function getMatching(){
+    const from = document.getElementById('bulkAssetFrom').value;
+    const to = document.getElementById('bulkAssetTo').value;
+    const venue = document.getElementById('bulkAssetVenue').value;
+    const jenis = document.getElementById('bulkAssetJenis').value;
+    return assets.filter(a => {
+      if(from && (!a.tarikhTerima || a.tarikhTerima < from)) return false;
+      if(to && (!a.tarikhTerima || a.tarikhTerima > to)) return false;
+      if(venue !== 'all' && a.venue !== venue) return false;
+      if(jenis !== 'all' && a.jenisPeralatan !== jenis) return false;
+      return true;
+    });
+  }
+  function updatePreview(){
+    const count = getMatching().length;
+    document.getElementById('bulkAssetPreviewCount').textContent = `${count} borang sepadan dengan kriteria ini.`;
+  }
+  document.getElementById('bulkAssetFrom').addEventListener('change', updatePreview);
+  document.getElementById('bulkAssetTo').addEventListener('change', updatePreview);
+  document.getElementById('bulkAssetVenue').addEventListener('change', updatePreview);
+  document.getElementById('bulkAssetJenis').addEventListener('change', updatePreview);
+  updatePreview();
+
+  document.getElementById('confirmBulkPrintAsset').onclick = () => {
+    const matching = getMatching();
+    if(matching.length === 0){
+      showToast('Tiada aset sepadan dengan kriteria ini.');
+      return;
+    }
+    const sorted = matching.slice().sort((a,b) => (a.tarikhTerima||'').localeCompare(b.tarikhTerima||''));
+    printBorangBulk(sorted);
+    closeBulkPrintAssetModal();
+  };
+}
+
+function closeBulkPrintAssetModal(){
+  const overlay = document.getElementById('bulkPrintAssetOverlay');
+  if(overlay) overlay.remove();
 }
 
 function openBulkPrintModal(){
@@ -1647,21 +1741,8 @@ function exportCSV(){
   showToast('Fail CSV dimuat turun.');
 }
 
-function printBorang(a){
-  if(!a) return;
-  const jenis = jenisLabel(a) || '';
-  const sigBox = (label) => `
-    <div class="sig-box">
-      <div class="sig-pen-space"></div>
-      <div class="sig-line">………………………………..</div>
-      <div class="sig-title">*${label}</div>
-      <div class="sig-row"><span>Nama</span><span>:</span></div>
-      <div class="sig-row"><span>Jawatan</span><span>:</span></div>
-      <div class="sig-row"><span>Tarikh</span><span>:</span></div>
-      <div class="sig-row"><span>Cop</span><span>:</span></div>
-    </div>`;
-  const html = `<!DOCTYPE html><html lang="ms"><head><meta charset="UTF-8"><title>Borang Pembekalan - ${escapeHtml(a.noAset||'')}</title>
-  <style>
+function borangPembekalanStyles(){
+  return `
     * { box-sizing: border-box; }
     @page { size: A4; margin: 10mm; }
     body{font-family:Arial,Helvetica,sans-serif; font-size:10px; color:#000; max-width:190mm; margin:10px auto; padding:0 10px;}
@@ -1698,15 +1779,30 @@ function printBorang(a){
     .pemulangan .sig-title{text-align:left;}
     .print-bar{text-align:center; margin-bottom:12px;}
     .print-bar button{padding:8px 18px; font-size:13px; cursor:pointer;}
+    .page-block{margin-bottom:0;}
+    .page-block:not(:last-child){page-break-after: always;}
     @media print{ .print-bar{display:none;} body{margin:0; padding:0;} }
-  </style></head>
-  <body>
-    <div class="print-bar"><button onclick="window.print()">Cetak / Simpan sebagai PDF</button></div>
+  `;
+}
+
+function borangPembekalanBody(a){
+  const jenis = jenisLabel(a) || '';
+  const sigBox = (label) => `
+    <div class="sig-box">
+      <div class="sig-pen-space"></div>
+      <div class="sig-line">………………………………..</div>
+      <div class="sig-title">*${label}</div>
+      <div class="sig-row"><span>Nama</span><span>:</span></div>
+      <div class="sig-row"><span>Jawatan</span><span>:</span></div>
+      <div class="sig-row"><span>Tarikh</span><span>:</span></div>
+      <div class="sig-row"><span>Cop</span><span>:</span></div>
+    </div>`;
+  return `
     <div class="letterhead">
       <img src="${MSN_LOGO}" alt="Logo MSN">
       <div class="titles">
         <div class="doc-title">BORANG PEMBEKALAN</div>
-        <div class="doc-sub">CAWANGAN TEKNOLOGI MAKLUMAT</div>
+        <div class="doc-sub">CAWANGAN PENGURUSAN MAKLUMAT</div>
       </div>
     </div>
     <table class="borang">
@@ -1752,7 +1848,7 @@ function printBorang(a){
           <div class="sig-row"><span>Cop</span><span>:</span></div>
         </div>
         <div>
-          <div style="font-style:italic; margin-bottom:4px;">Pengesahan CTM :</div>
+          <div style="font-style:italic; margin-bottom:4px;">Pengesahan CPM :</div>
           <div class="sig-pen-space"></div>
           <div class="sig-line">………………………………..</div>
           <div class="sig-title">*Tandatangan</div>
@@ -1763,6 +1859,31 @@ function printBorang(a){
         </div>
       </div>
     </div>
+  `;
+}
+
+function printBorang(a){
+  if(!a) return;
+  const html = `<!DOCTYPE html><html lang="ms"><head><meta charset="UTF-8"><title>Borang Pembekalan - ${escapeHtml(a.noAset||'')}</title>
+  <style>${borangPembekalanStyles()}</style></head>
+  <body>
+    <div class="print-bar"><button onclick="window.print()">Cetak / Simpan sebagai PDF</button></div>
+    ${borangPembekalanBody(a)}
+  </body></html>`;
+  const w = window.open('', '_blank');
+  if(!w){ showToast('Pop-up disekat. Benarkan pop-up untuk cetak borang.'); return; }
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
+}
+
+function printBorangBulk(assetList){
+  if(!assetList || assetList.length === 0){ showToast('Tiada aset sepadan untuk dicetak.'); return; }
+  const html = `<!DOCTYPE html><html lang="ms"><head><meta charset="UTF-8"><title>Borang Daftar Aset - Cetakan Pukal</title>
+  <style>${borangPembekalanStyles()}</style></head>
+  <body>
+    <div class="print-bar"><button onclick="window.print()">Cetak / Simpan sebagai PDF (${assetList.length} borang)</button></div>
+    ${assetList.map(a => `<div class="page-block">${borangPembekalanBody(a)}</div>`).join('')}
   </body></html>`;
   const w = window.open('', '_blank');
   if(!w){ showToast('Pop-up disekat. Benarkan pop-up untuk cetak borang.'); return; }
@@ -1865,8 +1986,8 @@ function attachViewHandlers(){
 
   const btnExport = document.getElementById('btnExportCsv') || document.getElementById('btnExportCsv2');
   if(btnExport) btnExport.onclick = exportCSV;
-  const btnPrint = document.getElementById('btnPrint') || document.getElementById('btnPrint2');
-  if(btnPrint) btnPrint.onclick = () => window.print();
+  const btnPrintList = document.getElementById('btnPrintList');
+  if(btnPrintList) btnPrintList.onclick = () => openBulkPrintAssetModal();
 
   const btnExportMaint = document.getElementById('btnExportMaintCsv') || document.getElementById('btnExportMaintCsv2');
   if(btnExportMaint) btnExportMaint.onclick = exportMaintenanceCSV;
