@@ -471,6 +471,7 @@ function openAssetPreview(assetId){
   previewAsset = asset;
   const modal = document.getElementById('asset-preview-modal');
   modal.classList.add('active');
+  document.querySelector('#asset-preview-modal .preview-title').textContent = 'Preview Aset';
   
   const jenis = jenisLabel(asset) || '';
   const previewHtml = `
@@ -539,6 +540,81 @@ function closeAssetPreview(){
   const modal = document.getElementById('asset-preview-modal');
   modal.classList.remove('active');
   previewAsset = null;
+}
+
+function openMaintenancePreview(recordId){
+  const record = maintenanceRecords.find(m => m.id === recordId);
+  if(!record) return;
+  
+  const modal = document.getElementById('asset-preview-modal');
+  modal.classList.add('active');
+  document.querySelector('#asset-preview-modal .preview-title').textContent = 'Preview Rekod Penyenggaraan';
+  
+  const previewHtml = `
+    <div class="preview-row">
+      <div class="preview-label">No. Aset</div>
+      <div class="preview-value">${escapeHtml(record.noAset||'-')}</div>
+    </div>
+    <div class="preview-row">
+      <div class="preview-label">Tarikh</div>
+      <div class="preview-value">${fmtDate(record.tarikh)}</div>
+    </div>
+    <div class="preview-row">
+      <div class="preview-label">Masa</div>
+      <div class="preview-value">${escapeHtml(record.masa||'-')}</div>
+    </div>
+    <div class="preview-row">
+      <div class="preview-label">Nama Pengguna</div>
+      <div class="preview-value">${escapeHtml(record.namaPengguna||'-')}</div>
+    </div>
+    <div class="preview-row">
+      <div class="preview-label">Bahagian</div>
+      <div class="preview-value">${escapeHtml(record.bahagian||'-')}</div>
+    </div>
+    <div class="preview-row">
+      <div class="preview-label">Lokasi</div>
+      <div class="preview-value">${escapeHtml(record.lokasi||'-')}</div>
+    </div>
+    <div class="preview-row">
+      <div class="preview-label">Cawangan</div>
+      <div class="preview-value">${escapeHtml(record.cawangan||'-')}</div>
+    </div>
+    <div class="preview-row">
+      <div class="preview-label">Jenis</div>
+      <div class="preview-value">${escapeHtml(record.jenisPeralatan||'-')}</div>
+    </div>
+    <div class="preview-row">
+      <div class="preview-label">Jenama</div>
+      <div class="preview-value">${escapeHtml(record.jenama||'-')}</div>
+    </div>
+    <div class="preview-row">
+      <div class="preview-label">Model</div>
+      <div class="preview-value">${escapeHtml(record.model||'-')}</div>
+    </div>
+    <div class="preview-row">
+      <div class="preview-label">No. Siri CPU</div>
+      <div class="preview-value">${escapeHtml(record.noSiriCpu||'-')}</div>
+    </div>
+    <div class="preview-row">
+      <div class="preview-label">No. Siri Monitor</div>
+      <div class="preview-value">${escapeHtml(record.noSiriMonitor||'-')}</div>
+    </div>
+    <div class="preview-row">
+      <div class="preview-label">Juruteknik</div>
+      <div class="preview-value">${escapeHtml(record.juruteknikNama||'-')}</div>
+    </div>
+    <div class="preview-row">
+      <div class="preview-label">Catatan</div>
+      <div class="preview-value">${escapeHtml(record.catatan||'-')}</div>
+    </div>
+  `;
+  
+  document.getElementById('preview-body').innerHTML = previewHtml;
+  document.getElementById('previewPrintBtn').textContent = 'Cetak Borang Penuh';
+  document.getElementById('previewPrintBtn').onclick = () => {
+    closeAssetPreview();
+    printMaintenance(record);
+  };
 }
 
 /* Danger Zone: Delete All Records */
@@ -1216,7 +1292,7 @@ function renderMaintenance(){
       <tbody>
         ${pageItems.map(m=>`<tr>
           <td>${fmtDate(m.tarikh)}</td>
-          <td><span class="asset-tag">${escapeHtml(m.noAset||'-')}</span></td>
+          <td><span class="asset-tag" style="cursor:pointer; transition:opacity 0.2s;" onclick="openMaintenancePreview('${m.id}')" onmouseover="this.style.opacity='0.7'" onmouseout="this.style.opacity='1'" title="Klik untuk preview">${escapeHtml(m.noAset||'-')}</span></td>
           <td>${escapeHtml(m.namaPengguna||'-')}</td>
           <td>${escapeHtml(m.lokasi||'-')}</td>
           <td>${escapeHtml(m.jenisPeralatan||'-')}</td>
