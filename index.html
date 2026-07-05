@@ -19,6 +19,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.4/html5-qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bcryptjs/2.4.3/bcrypt.min.js"></script>
 <style>
   :root{
     --bg:#0B0B12;
@@ -286,6 +287,31 @@
     #csv-import-modal{padding:40px;}
   }
 
+  .profile-menu{position:relative;}
+  .profile-btn{width:36px; height:36px; border-radius:50%; border:1px solid var(--line-strong); background:linear-gradient(135deg, var(--accent), var(--secondary)); color:#fff; font-size:13px; font-weight:700; display:flex; align-items:center; justify-content:center; cursor:pointer;}
+  .profile-dropdown{position:absolute; top:calc(100% + 8px); right:0; background:var(--surface); border:1px solid rgba(139,92,246,0.32); border-radius:10px; box-shadow:0 10px 34px -14px rgba(139,92,246,0.5); min-width:200px; padding:12px; display:none; z-index:60;}
+  .profile-dropdown.active{display:block;}
+  .profile-dropdown-name{font-size:13.5px; font-weight:700; color:var(--ink);}
+  .profile-dropdown-role{font-size:11.5px; color:var(--ink-soft); margin-top:1px; text-transform:capitalize;}
+  .profile-dropdown-divider{height:1px; background:var(--line); margin:10px 0;}
+  .profile-dropdown-item{width:100%; display:flex; align-items:center; gap:8px; padding:8px 6px; border:none; background:none; color:var(--ink); font-size:13px; cursor:pointer; border-radius:6px; text-align:left;}
+  .profile-dropdown-item:hover{background:var(--surface-2);}
+
+  #admin-panel-modal{position:fixed; inset:0; background:rgba(11,11,18,0.9); display:none; z-index:998; overflow-y:auto; padding:16px; align-items:flex-start; justify-content:center;}
+  #admin-panel-modal.active{display:flex; padding-top:20px;}
+  #admin-panel-content{background:var(--surface); border:1px solid rgba(139,92,246,0.32); border-radius:12px; padding:24px; width:100%; max-width:560px; box-shadow:0 10px 34px -18px rgba(139,92,246,0.5);}
+  .user-row{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 0; border-bottom:1px solid var(--line);}
+  .user-row:last-child{border-bottom:none;}
+  .user-row-info{flex:1; min-width:0;}
+  .user-row-name{font-size:13.5px; font-weight:600; color:var(--ink);}
+  .user-row-meta{font-size:11.5px; color:var(--ink-soft); margin-top:1px;}
+  .user-row-actions{display:flex; gap:6px; flex-shrink:0;}
+  .user-row-actions button{border:1px solid var(--line); background:var(--surface-2); color:var(--ink); border-radius:6px; padding:5px 9px; font-size:11.5px; cursor:pointer;}
+  .user-row-actions button.danger{color:var(--status-dilupus); border-color:rgba(248,113,113,0.4);}
+  @media (min-width:900px){
+    #admin-panel-modal{padding:40px;}
+  }
+
   /* Glowing purple/pink gradient border ring for cards */
   .panel, .metric-card, .modal, .glow-card{position:relative; isolation:isolate;}
   .panel::before, .metric-card::before, .modal::before, .glow-card::before{
@@ -326,12 +352,19 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
     </div>
     <h1 style="font-size:18px; margin-bottom:4px;">Sistem Pengurusan Aset ICT</h1>
-    <p style="font-size:12.5px; color:var(--ink-soft); margin:0 0 22px;">Log masuk untuk teruskan</p>
+    <p style="font-size:12.5px; color:var(--ink-soft); margin:0 0 22px;" id="loginSubtitle">Log masuk untuk teruskan</p>
     <form id="loginForm" style="text-align:left; display:flex; flex-direction:column; gap:12px;">
-      <div class="field"><label>Emel</label><input type="email" id="loginEmail" required autocomplete="username"></div>
+      <div class="field"><label>Nama Pengguna</label><input type="text" id="loginUsername" required autocomplete="username" autocapitalize="off"></div>
       <div class="field"><label>Kata Laluan</label><input type="password" id="loginPassword" required autocomplete="current-password"></div>
       <div id="loginError" style="color:var(--status-dilupus); font-size:12.5px; display:none;"></div>
       <button type="submit" class="btn btn-primary" style="justify-content:center; margin-top:6px;" id="loginSubmitBtn">Log Masuk</button>
+    </form>
+    <form id="changePasswordForm" style="text-align:left; display:none; flex-direction:column; gap:12px;">
+      <p style="font-size:12.5px; color:var(--ink-soft); margin:0 0 4px;">Ini log masuk pertama anda / kata laluan telah direset. Sila tetapkan kata laluan baharu (minimum 6 aksara).</p>
+      <div class="field"><label>Kata Laluan Baharu</label><input type="password" id="newPassword" required minlength="6" autocomplete="new-password"></div>
+      <div class="field"><label>Sahkan Kata Laluan Baharu</label><input type="password" id="newPasswordConfirm" required minlength="6" autocomplete="new-password"></div>
+      <div id="changePasswordError" style="color:var(--status-dilupus); font-size:12.5px; display:none;"></div>
+      <button type="submit" class="btn btn-primary" style="justify-content:center; margin-top:6px;" id="changePasswordSubmitBtn">Tetapkan Kata Laluan</button>
     </form>
   </div>
 </div>
@@ -353,9 +386,24 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
           <span>Daftar aset</span>
         </button>
-        <button class="btn no-print" id="btnLogout" title="Log keluar" aria-label="Log keluar">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
-        </button>
+        <div class="profile-menu no-print" id="profileMenu">
+          <button class="profile-btn" id="profileBtn" title="Profil" aria-label="Profil">
+            <span id="profileInitials">?</span>
+          </button>
+          <div class="profile-dropdown" id="profileDropdown">
+            <div class="profile-dropdown-name" id="profileDropdownName">-</div>
+            <div class="profile-dropdown-role" id="profileDropdownRole">-</div>
+            <div class="profile-dropdown-divider"></div>
+            <button class="profile-dropdown-item" id="btnAdminPanel" style="display:none;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+              Panel Admin
+            </button>
+            <button class="profile-dropdown-item" id="btnLogout">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+              Log Keluar
+            </button>
+          </div>
+        </div>
       </div>
     </div>
     <nav class="no-print">
@@ -527,6 +575,10 @@ function openAssetPreview(assetId){
       <div class="preview-label">Status</div>
       <div class="preview-value">${escapeHtml(asset.status||'-')}</div>
     </div>
+    <div class="preview-row">
+      <div class="preview-label">Dibuat oleh</div>
+      <div class="preview-value">${escapeHtml(asset.createdByName || '-')}</div>
+    </div>
   `;
   
   document.getElementById('preview-body').innerHTML = previewHtml;
@@ -606,6 +658,10 @@ function openMaintenancePreview(recordId){
     <div class="preview-row">
       <div class="preview-label">Catatan</div>
       <div class="preview-value">${escapeHtml(record.catatan||'-')}</div>
+    </div>
+    <div class="preview-row">
+      <div class="preview-label">Dibuat oleh</div>
+      <div class="preview-value">${escapeHtml(record.createdByName || '-')}</div>
     </div>
   `;
   
@@ -767,6 +823,7 @@ try{
 const db = firebaseReady ? firebase.firestore() : null;
 const assetsCollection = firebaseReady ? db.collection('assets') : null;
 const maintenanceCollection = firebaseReady ? db.collection('maintenance') : null;
+const usersCollection = firebaseReady ? db.collection('users') : null;
 
 function applyLogo(){
   const html = `<img src="${MSN_LOGO}" alt="Logo MSN" style="width:100%; height:100%; object-fit:contain;">`;
@@ -792,26 +849,105 @@ if(!firebaseReady){
 function showApp(){
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
+  document.getElementById('loginForm').style.display = 'flex';
+  document.getElementById('changePasswordForm').style.display = 'none';
 }
 function showLogin(){
   document.getElementById('app').style.display = 'none';
   document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('loginForm').style.display = 'flex';
+  document.getElementById('changePasswordForm').style.display = 'none';
+  document.getElementById('loginSubtitle').textContent = 'Log masuk untuk teruskan';
+}
+function showChangePasswordScreen(){
+  document.getElementById('loginForm').style.display = 'none';
+  document.getElementById('changePasswordForm').style.display = 'flex';
+  document.getElementById('loginSubtitle').textContent = 'Tetapkan kata laluan baharu';
 }
 
-function initAuthAndListener(){
-  firebase.auth().onAuthStateChanged((user) => {
-    if(user){
-      showApp();
-      initAssetsListener();
-      initMaintenanceListener();
-    } else {
+let currentUser = null; // { username, namaPenuh, role }
+let pendingLoginUsername = null;
+
+function updateProfileUI(){
+  if(!currentUser) return;
+  const initials = (currentUser.namaPenuh||currentUser.username||'?').trim().split(/\s+/).slice(0,2).map(w=>w[0]).join('').toUpperCase();
+  document.getElementById('profileInitials').textContent = initials || '?';
+  document.getElementById('profileDropdownName').textContent = currentUser.namaPenuh || currentUser.username;
+  document.getElementById('profileDropdownRole').textContent = currentUser.role === 'admin' ? 'Admin' : 'Juruteknik';
+  document.getElementById('btnAdminPanel').style.display = currentUser.role === 'admin' ? 'flex' : 'none';
+}
+
+async function bootstrapSeedAdmin(){
+  try{
+    const snap = await usersCollection.limit(1).get();
+    if(snap.empty){
+      const hash = dcodeIO.bcrypt.hashSync('admin', 10);
+      await usersCollection.doc('salihin').set({
+        username: 'salihin',
+        namaPenuh: 'Salihin',
+        role: 'admin',
+        passwordHash: hash,
+        mustChangePassword: true,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }
+  }catch(err){
+    console.error('Bootstrap seed admin failed:', err);
+  }
+}
+
+function persistSession(user){
+  localStorage.setItem('aset-ict-session', JSON.stringify(user));
+}
+function loadSession(){
+  try{
+    const raw = localStorage.getItem('aset-ict-session');
+    return raw ? JSON.parse(raw) : null;
+  }catch(e){ return null; }
+}
+function clearSession(){
+  localStorage.removeItem('aset-ict-session');
+}
+
+async function initAuthAndListener(){
+  // Anonymous auth just to satisfy Firestore security rules (request.auth != null).
+  // Actual login/identity is handled by our own username/password system below.
+  try{
+    if(!firebase.auth().currentUser){
+      await firebase.auth().signInAnonymously();
+    }
+  }catch(err){
+    console.error('Anonymous auth failed:', err);
+  }
+
+  await bootstrapSeedAdmin();
+
+  const session = loadSession();
+  if(session && session.username){
+    try{
+      const doc = await usersCollection.doc(session.username).get();
+      if(doc.exists){
+        const data = doc.data();
+        currentUser = { username: data.username, namaPenuh: data.namaPenuh, role: data.role };
+        updateProfileUI();
+        showApp();
+        initAssetsListener();
+        initMaintenanceListener();
+      } else {
+        clearSession();
+        showLogin();
+      }
+    }catch(err){
+      console.error(err);
       showLogin();
     }
-  });
+  } else {
+    showLogin();
+  }
 
   document.getElementById('loginForm').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const email = document.getElementById('loginEmail').value.trim();
+    const username = document.getElementById('loginUsername').value.trim().toLowerCase();
     const password = document.getElementById('loginPassword').value;
     const errorBox = document.getElementById('loginError');
     const btn = document.getElementById('loginSubmitBtn');
@@ -819,19 +955,247 @@ function initAuthAndListener(){
     btn.disabled = true;
     btn.textContent = 'Sedang log masuk...';
     try{
-      await firebase.auth().signInWithEmailAndPassword(email, password);
+      const doc = await usersCollection.doc(username).get();
+      if(!doc.exists){
+        throw new Error('not-found');
+      }
+      const data = doc.data();
+      const match = dcodeIO.bcrypt.compareSync(password, data.passwordHash);
+      if(!match){
+        throw new Error('wrong-password');
+      }
+      if(data.mustChangePassword){
+        pendingLoginUsername = username;
+        showChangePasswordScreen();
+      } else {
+        currentUser = { username: data.username, namaPenuh: data.namaPenuh, role: data.role };
+        persistSession(currentUser);
+        updateProfileUI();
+        showApp();
+        initAssetsListener();
+        initMaintenanceListener();
+      }
     }catch(err){
-      errorBox.textContent = 'Emel atau kata laluan salah. Sila cuba lagi.';
+      errorBox.textContent = 'Nama pengguna atau kata laluan salah. Sila cuba lagi.';
       errorBox.style.display = 'block';
     }
     btn.disabled = false;
     btn.textContent = 'Log Masuk';
   });
 
+  document.getElementById('changePasswordForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const newPw = document.getElementById('newPassword').value;
+    const confirmPw = document.getElementById('newPasswordConfirm').value;
+    const errorBox = document.getElementById('changePasswordError');
+    const btn = document.getElementById('changePasswordSubmitBtn');
+    errorBox.style.display = 'none';
+    if(newPw.length < 6){
+      errorBox.textContent = 'Kata laluan mesti sekurang-kurangnya 6 aksara.';
+      errorBox.style.display = 'block';
+      return;
+    }
+    if(newPw !== confirmPw){
+      errorBox.textContent = 'Kata laluan tidak sepadan.';
+      errorBox.style.display = 'block';
+      return;
+    }
+    btn.disabled = true;
+    btn.textContent = 'Menyimpan...';
+    try{
+      const hash = dcodeIO.bcrypt.hashSync(newPw, 10);
+      await usersCollection.doc(pendingLoginUsername).set({ passwordHash: hash, mustChangePassword: false }, {merge:true});
+      const doc = await usersCollection.doc(pendingLoginUsername).get();
+      const data = doc.data();
+      currentUser = { username: data.username, namaPenuh: data.namaPenuh, role: data.role };
+      persistSession(currentUser);
+      updateProfileUI();
+      document.getElementById('newPassword').value = '';
+      document.getElementById('newPasswordConfirm').value = '';
+      pendingLoginUsername = null;
+      showApp();
+      initAssetsListener();
+      initMaintenanceListener();
+    }catch(err){
+      console.error(err);
+      errorBox.textContent = 'Gagal simpan kata laluan baharu. Cuba lagi.';
+      errorBox.style.display = 'block';
+    }
+    btn.disabled = false;
+    btn.textContent = 'Tetapkan Kata Laluan';
+  });
+
   document.getElementById('btnLogout').addEventListener('click', () => {
-    firebase.auth().signOut();
+    currentUser = null;
+    clearSession();
+    document.getElementById('profileDropdown').classList.remove('active');
+    showLogin();
+  });
+
+  document.getElementById('profileBtn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    document.getElementById('profileDropdown').classList.toggle('active');
+  });
+  document.addEventListener('click', () => {
+    document.getElementById('profileDropdown').classList.remove('active');
+  });
+
+  document.getElementById('btnAdminPanel').addEventListener('click', () => {
+    document.getElementById('profileDropdown').classList.remove('active');
+    openAdminPanel();
   });
 }
+
+/* Admin Panel: User Management */
+function generateTempPassword(){
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+  let pw = '';
+  for(let i=0;i<8;i++) pw += chars[Math.floor(Math.random()*chars.length)];
+  return pw;
+}
+
+async function openAdminPanel(){
+  const modal = document.getElementById('admin-panel-modal');
+  modal.classList.add('active');
+  document.getElementById('addUserFormWrap').style.display = 'none';
+  document.getElementById('newUserTempPassword').value = generateTempPassword();
+  await renderUserList();
+}
+
+function closeAdminPanel(){
+  document.getElementById('admin-panel-modal').classList.remove('active');
+}
+
+async function renderUserList(){
+  const wrap = document.getElementById('userListWrap');
+  wrap.innerHTML = '<p style="font-size:12.5px; color:var(--ink-soft);">Memuatkan senarai pengguna...</p>';
+  try{
+    const snap = await usersCollection.get();
+    const users = [];
+    snap.forEach(doc => users.push(doc.data()));
+    users.sort((a,b) => (a.namaPenuh||'').localeCompare(b.namaPenuh||''));
+    if(users.length === 0){
+      wrap.innerHTML = '<p style="font-size:12.5px; color:var(--ink-soft);">Tiada pengguna lagi.</p>';
+      return;
+    }
+    wrap.innerHTML = users.map(u => `
+      <div class="user-row">
+        <div class="user-row-info">
+          <div class="user-row-name">${escapeHtml(u.namaPenuh||u.username)}</div>
+          <div class="user-row-meta">@${escapeHtml(u.username)} · ${u.role === 'admin' ? 'Admin' : 'Juruteknik'}${u.mustChangePassword ? ' · Menunggu tetap kata laluan' : ''}</div>
+        </div>
+        <div class="user-row-actions">
+          <button onclick="resetUserPassword('${escapeHtml(u.username)}')">Reset Kata Laluan</button>
+          ${u.username !== currentUser.username ? `<button class="danger" onclick="removeUser('${escapeHtml(u.username)}')">Buang</button>` : ''}
+        </div>
+      </div>
+    `).join('');
+  }catch(err){
+    console.error(err);
+    wrap.innerHTML = '<p style="font-size:12.5px; color:var(--status-dilupus);">Gagal memuatkan senarai pengguna.</p>';
+  }
+}
+
+async function resetUserPassword(username){
+  const tempPw = generateTempPassword();
+  if(!confirm(`Reset kata laluan untuk @${username}?\n\nKata laluan sementara baharu: ${tempPw}\n\nSila catat/salin kata laluan ini untuk diberikan kepada pengguna secara selamat. Pengguna akan diminta menetapkan kata laluan baharu semasa log masuk seterusnya.`)) return;
+  try{
+    const hash = dcodeIO.bcrypt.hashSync(tempPw, 10);
+    await usersCollection.doc(username).set({ passwordHash: hash, mustChangePassword: true }, {merge:true});
+    showToast(`Kata laluan direset. Kata laluan sementara: ${tempPw}`);
+    await renderUserList();
+  }catch(err){
+    console.error(err);
+    showToast('Gagal reset kata laluan.');
+  }
+}
+
+async function removeUser(username){
+  if(!confirm(`Padam pengguna @${username}? Tindakan ini tidak boleh diundur.`)) return;
+  try{
+    await usersCollection.doc(username).delete();
+    showToast('Pengguna dipadam.');
+    await renderUserList();
+  }catch(err){
+    console.error(err);
+    showToast('Gagal padam pengguna.');
+  }
+}
+
+function wireAdminPanelFormHandlers(){
+  const btnShow = document.getElementById('btnShowAddUserForm');
+  const wrap = document.getElementById('addUserFormWrap');
+  const btnCancel = document.getElementById('btnCancelAddUser');
+  const btnConfirm = document.getElementById('btnConfirmAddUser');
+
+  btnShow.onclick = () => {
+    wrap.style.display = wrap.style.display === 'none' ? 'block' : 'none';
+    document.getElementById('newUserNamaPenuh').value = '';
+    document.getElementById('newUserUsername').value = '';
+    document.getElementById('newUserRole').value = 'technician';
+    document.getElementById('newUserTempPassword').value = generateTempPassword();
+    document.getElementById('addUserError').style.display = 'none';
+  };
+  btnCancel.onclick = () => { wrap.style.display = 'none'; };
+
+  btnConfirm.onclick = async () => {
+    const namaPenuh = document.getElementById('newUserNamaPenuh').value.trim();
+    const username = document.getElementById('newUserUsername').value.trim().toLowerCase();
+    const role = document.getElementById('newUserRole').value;
+    const tempPw = document.getElementById('newUserTempPassword').value;
+    const errorBox = document.getElementById('addUserError');
+    errorBox.style.display = 'none';
+
+    if(!namaPenuh || !username || !tempPw){
+      errorBox.textContent = 'Sila lengkapkan semua ruangan.';
+      errorBox.style.display = 'block';
+      return;
+    }
+    if(!/^[a-z0-9._]+$/.test(username)){
+      errorBox.textContent = 'Nama pengguna hanya boleh huruf kecil, nombor, titik atau garis bawah.';
+      errorBox.style.display = 'block';
+      return;
+    }
+    if(tempPw.length < 6){
+      errorBox.textContent = 'Kata laluan sementara mesti sekurang-kurangnya 6 aksara.';
+      errorBox.style.display = 'block';
+      return;
+    }
+    btnConfirm.disabled = true;
+    btnConfirm.textContent = 'Menyimpan...';
+    try{
+      const existing = await usersCollection.doc(username).get();
+      if(existing.exists){
+        errorBox.textContent = 'Nama pengguna ini sudah wujud.';
+        errorBox.style.display = 'block';
+        btnConfirm.disabled = false;
+        btnConfirm.textContent = 'Simpan Pengguna';
+        return;
+      }
+      const hash = dcodeIO.bcrypt.hashSync(tempPw, 10);
+      await usersCollection.doc(username).set({
+        username, namaPenuh, role,
+        passwordHash: hash,
+        mustChangePassword: true,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      showToast(`Pengguna @${username} berjaya ditambah. Kata laluan sementara: ${tempPw}`);
+      wrap.style.display = 'none';
+      await renderUserList();
+    }catch(err){
+      console.error(err);
+      errorBox.textContent = 'Gagal simpan pengguna. Cuba lagi.';
+      errorBox.style.display = 'block';
+    }
+    btnConfirm.disabled = false;
+    btnConfirm.textContent = 'Simpan Pengguna';
+  };
+
+  document.getElementById('admin-panel-modal').addEventListener('mousedown', (e) => {
+    if(e.target === document.getElementById('admin-panel-modal')) closeAdminPanel();
+  });
+}
+wireAdminPanelFormHandlers();
 
 let assets = [];
 let loaded = false;
@@ -1622,7 +1986,7 @@ function openMaintenanceForm(){
 
           <div class="form-section-label">Catatan &amp; Pengesahan</div>
           <div class="field full"><label>Catatan</label><textarea name="catatan" placeholder="Catatan tambahan (pilihan)"></textarea></div>
-          <div class="field"><label>Nama Pemeriksa / Juruteknik</label><input type="text" name="juruteknikNama" required></div>
+          <div class="field"><label>Nama Pemeriksa / Juruteknik</label><input type="text" name="juruteknikNama" value="${escapeHtml(currentUser ? currentUser.namaPenuh : '')}" required></div>
           <div class="field"><label>Nama Pengguna (pengesahan)</label><input type="text" name="penggunaNama" id="maintPenggunaNama"></div>
           <div class="field full">
             <label>Tandatangan Juruteknik (lukis di skrin)</label>
@@ -1714,6 +2078,10 @@ async function handleMaintenanceFormSubmit(e){
   data.juruteknikSignedAt = data.juruteknikSignature ? signedDate : '';
   data.penggunaSignedAt = data.penggunaSignature ? signedDate : '';
   data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+  if(currentUser){
+    data.createdBy = currentUser.username;
+    data.createdByName = currentUser.namaPenuh;
+  }
   try{
     await maintenanceCollection.doc(uid()).set(data);
     showToast('Rekod penyenggaraan disimpan.');
@@ -2072,6 +2440,10 @@ async function handleFormSubmit(e){
       await assetsCollection.doc(editingId).set(data, {merge:true});
       showToast('Aset dikemaskini.');
     } else {
+      if(currentUser){
+        data.createdBy = currentUser.username;
+        data.createdByName = currentUser.namaPenuh;
+      }
       await assetsCollection.doc(uid()).set(data);
       showToast('Aset didaftarkan.');
     }
@@ -2544,6 +2916,37 @@ if('serviceWorker' in navigator){
   });
 }
 </script>
+<div id="admin-panel-modal">
+  <div id="admin-panel-content">
+    <div class="preview-header">
+      <div class="preview-title">Panel Admin — Pengurusan Pengguna</div>
+      <button class="preview-close" onclick="closeAdminPanel()" aria-label="Tutup">×</button>
+    </div>
+    <button class="btn btn-primary" id="btnShowAddUserForm" style="margin-bottom:16px;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      Tambah Pengguna Baharu
+    </button>
+    <div id="addUserFormWrap" style="display:none; margin-bottom:18px; padding:14px; border:1px solid var(--line); border-radius:10px; background:var(--surface-2);">
+      <div class="field full" style="margin-bottom:10px;"><label>Nama Penuh</label><input type="text" id="newUserNamaPenuh" placeholder="cth: Salihin Abdullah"></div>
+      <div class="field full" style="margin-bottom:10px;"><label>Nama Pengguna (Username)</label><input type="text" id="newUserUsername" placeholder="cth: salihin" autocapitalize="off"></div>
+      <div class="field full" style="margin-bottom:10px;">
+        <label>Peranan</label>
+        <select id="newUserRole">
+          <option value="technician">Juruteknik</option>
+          <option value="admin">Admin</option>
+        </select>
+      </div>
+      <div class="field full" style="margin-bottom:12px;"><label>Kata Laluan Sementara</label><input type="text" id="newUserTempPassword" placeholder="Minimum 6 aksara"></div>
+      <div id="addUserError" style="color:var(--status-dilupus); font-size:12.5px; display:none; margin-bottom:10px;"></div>
+      <div style="display:flex; gap:8px;">
+        <button class="btn" id="btnCancelAddUser" style="flex:1;">Batal</button>
+        <button class="btn btn-primary" id="btnConfirmAddUser" style="flex:1;">Simpan Pengguna</button>
+      </div>
+    </div>
+    <div id="userListWrap"></div>
+  </div>
+</div>
+
 <div id="csv-import-modal">
   <div id="csv-import-content">
     <div class="preview-header">
