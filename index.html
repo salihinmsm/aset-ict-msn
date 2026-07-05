@@ -1195,7 +1195,6 @@ function wireAdminPanelFormHandlers(){
     if(e.target === document.getElementById('admin-panel-modal')) closeAdminPanel();
   });
 }
-wireAdminPanelFormHandlers();
 
 let assets = [];
 let loaded = false;
@@ -2909,6 +2908,9 @@ document.querySelectorAll('.tab').forEach(tab=>{
 document.getElementById('btnAddTop').onclick = () => openForm(null);
 
 if(firebaseReady){ initAuthAndListener(); }
+
+// Wire admin panel form handlers after DOM is ready
+document.addEventListener('DOMContentLoaded', wireAdminPanelFormHandlers);
 
 if('serviceWorker' in navigator){
   window.addEventListener('load', () => {
