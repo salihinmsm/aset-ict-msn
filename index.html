@@ -824,6 +824,7 @@ const db = firebaseReady ? firebase.firestore() : null;
 const assetsCollection = firebaseReady ? db.collection('assets') : null;
 const maintenanceCollection = firebaseReady ? db.collection('maintenance') : null;
 const usersCollection = firebaseReady ? db.collection('users') : null;
+const userDirectoryCollection = firebaseReady ? db.collection('userDirectory') : null;
 
 function applyLogo(){
   const html = `<img src="${MSN_LOGO}" alt="Logo MSN" style="width:100%; height:100%; object-fit:contain;">`;
@@ -889,6 +890,12 @@ async function bootstrapSeedAdmin(){
         passwordHash: hash,
         mustChangePassword: true,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      await userDirectoryCollection.doc('salihin').set({
+        username: 'salihin',
+        namaPenuh: 'Salihin',
+        role: 'admin',
+        mustChangePassword: true
       });
     }
   }catch(err){
@@ -1005,6 +1012,7 @@ async function initAuthAndListener(){
     try{
       const hash = dcodeIO.bcrypt.hashSync(newPw, 10);
       await usersCollection.doc(pendingLoginUsername).set({ passwordHash: hash, mustChangePassword: false }, {merge:true});
+      await userDirectoryCollection.doc(pendingLoginUsername).set({ mustChangePassword: false }, {merge:true});
       const doc = await usersCollection.doc(pendingLoginUsername).get();
       const data = doc.data();
       currentUser = { username: data.username, namaPenuh: data.namaPenuh, role: data.role };
@@ -1070,7 +1078,7 @@ async function renderUserList(){
   const wrap = document.getElementById('userListWrap');
   wrap.innerHTML = '<p style="font-size:12.5px; color:var(--ink-soft);">Memuatkan senarai pengguna...</p>';
   try{
-    const snap = await usersCollection.get();
+    const snap = await userDirectoryCollection.get();
     const users = [];
     snap.forEach(doc => users.push(doc.data()));
     users.sort((a,b) => (a.namaPenuh||'').localeCompare(b.namaPenuh||''));
@@ -1102,6 +1110,7 @@ async function resetUserPassword(username){
   try{
     const hash = dcodeIO.bcrypt.hashSync(tempPw, 10);
     await usersCollection.doc(username).set({ passwordHash: hash, mustChangePassword: true }, {merge:true});
+    await userDirectoryCollection.doc(username).set({ mustChangePassword: true }, {merge:true});
     showToast(`Kata laluan direset. Kata laluan sementara: ${tempPw}`);
     await renderUserList();
   }catch(err){
@@ -1114,6 +1123,7 @@ async function removeUser(username){
   if(!confirm(`Padam pengguna @${username}? Tindakan ini tidak boleh diundur.`)) return;
   try{
     await usersCollection.doc(username).delete();
+    await userDirectoryCollection.doc(username).delete();
     showToast('Pengguna dipadam.');
     await renderUserList();
   }catch(err){
@@ -1178,6 +1188,10 @@ function wireAdminPanelFormHandlers(){
         passwordHash: hash,
         mustChangePassword: true,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      await userDirectoryCollection.doc(username).set({
+        username, namaPenuh, role,
+        mustChangePassword: true
       });
       showToast(`Pengguna @${username} berjaya ditambah. Kata laluan sementara: ${tempPw}`);
       wrap.style.display = 'none';
