@@ -2375,7 +2375,7 @@ function openForm(asset){
       <form id="assetForm">
         <div class="form-grid">
           <div class="form-section-label">Butiran peralatan</div>
-          <div class="field"><label>No. Aset *</label><input type="text" name="noAset" required value="${escapeHtml(a.noAset)}" placeholder="cth: MSN/H/26/01"></div>
+          <div class="field"><label>No. Aset *</label><input type="text" name="noAset" id="formNoAset" required value="${escapeHtml(a.noAset)}" placeholder="cth: MSN/H/26/01"><div id="noAsetError" style="color:var(--status-dilupus); font-size:11.5px; display:none; margin-top:4px;"></div></div>
           <div class="field"><label>Jenis (Kategori) *</label>
             <select name="jenisPeralatan" id="jenisSelect" required>${JENIS_OPTIONS.map(j=>`<option value="${j}" ${a.jenisPeralatan===j?'selected':''}>${j}</option>`).join('')}</select>
           </div>
@@ -2449,6 +2449,18 @@ async function handleFormSubmit(e){
   if(data.hargaPerolehan !== undefined && data.hargaPerolehan !== ''){
     data.hargaPerolehan = parseFloat(data.hargaPerolehan) || 0;
   }
+
+  const errorBox = document.getElementById('noAsetError');
+  errorBox.style.display = 'none';
+  const newNoAset = (data.noAset || '').trim().toLowerCase();
+  const duplicate = assets.find(x => (x.noAset||'').trim().toLowerCase() === newNoAset && x.id !== editingId);
+  if(duplicate){
+    errorBox.textContent = `No. Aset "${data.noAset}" sudah wujud dalam sistem (digunakan oleh: ${duplicate.namaPengguna||'-'}). Sila semak atau gunakan No. Aset yang lain.`;
+    errorBox.style.display = 'block';
+    document.getElementById('formNoAset').focus();
+    return;
+  }
+
   try{
     if(editingId){
       await assetsCollection.doc(editingId).set(data, {merge:true});
@@ -2564,17 +2576,36 @@ function openCsvImportModal(file){
     skipEmptyLines: true,
     complete: function(results){
       const rawRows = results.data;
-      csvImportRows = rawRows.map(mapCsvRowToAsset).filter(r => r.noAset);
+      const allMapped = rawRows.map(mapCsvRowToAsset).filter(r => r.noAset);
+
+      const existingNoAsetSet = new Set(assets.map(a => (a.noAset||'').trim().toLowerCase()));
+      const seenInFile = new Set();
+      const validRows = [];
+      const duplicateRows = [];
+
+      allMapped.forEach(row => {
+        const key = row.noAset.trim().toLowerCase();
+        if(existingNoAsetSet.has(key) || seenInFile.has(key)){
+          duplicateRows.push(row);
+        } else {
+          seenInFile.add(key);
+          validRows.push(row);
+        }
+      });
+      csvImportRows = validRows;
+
       const modal = document.getElementById('csv-import-modal');
       const body = document.getElementById('csvImportBody');
       
-      if(csvImportRows.length === 0){
+      if(allMapped.length === 0){
         body.innerHTML = `<p style="color:var(--status-dilupus); font-size:13px;">Tiada rekod sah dikesan. Pastikan fail CSV mempunyai lajur "No. Aset" dan format yang betul (guna fail Eksport CSV sebagai rujukan format).</p>`;
         document.getElementById('csvImportConfirmBtn').style.display = 'none';
       } else {
         const previewRows = csvImportRows.slice(0, 8);
         body.innerHTML = `
-          <p style="font-size:13px; color:var(--ink-soft); margin-bottom:8px;"><b style="color:var(--ink);">${csvImportRows.length} rekod</b> dikesan dan akan <b>ditambah sebagai rekod baharu</b> (rekod sedia ada tidak akan ditindih).</p>
+          <p style="font-size:13px; color:var(--ink-soft); margin-bottom:8px;"><b style="color:var(--ink);">${csvImportRows.length} rekod</b> sah dan akan <b>ditambah sebagai rekod baharu</b> (rekod sedia ada tidak akan ditindih).</p>
+          ${duplicateRows.length > 0 ? `<p style="font-size:12.5px; color:var(--status-dilupus); margin-bottom:8px;">⚠ ${duplicateRows.length} rekod dilangkau kerana No. Aset sudah wujud (dalam sistem atau berulang dalam fail): ${duplicateRows.slice(0,5).map(r=>escapeHtml(r.noAset)).join(', ')}${duplicateRows.length>5?', ...':''}</p>` : ''}
+          ${csvImportRows.length > 0 ? `
           <div class="csv-preview-wrap">
             <table class="csv-preview-table">
               <thead><tr><th>No. Aset</th><th>Nama Pengguna</th><th>Jenis</th><th>Jenama/Model</th><th>Status</th></tr></thead>
@@ -2584,8 +2615,9 @@ function openCsvImportModal(file){
             </table>
           </div>
           ${csvImportRows.length > 8 ? `<p style="font-size:11.5px; color:var(--ink-faint); margin-top:6px;">...dan ${csvImportRows.length - 8} lagi rekod.</p>` : ''}
+          ` : ''}
         `;
-        document.getElementById('csvImportConfirmBtn').style.display = '';
+        document.getElementById('csvImportConfirmBtn').style.display = csvImportRows.length > 0 ? '' : 'none';
       }
       modal.classList.add('active');
     },
