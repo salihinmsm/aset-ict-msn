@@ -558,6 +558,14 @@ function openAssetPreview(assetId){
       <div class="preview-value">${escapeHtml(asset.venue||'-')}</div>
     </div>
     <div class="preview-row">
+      <div class="preview-label">Tarikh Penyerahan</div>
+      <div class="preview-value">${fmtDate(asset.tarikhPenyerahan)}</div>
+    </div>
+    <div class="preview-row">
+      <div class="preview-label">Lokasi</div>
+      <div class="preview-value">${escapeHtml(asset.lokasi||'-')}</div>
+    </div>
+    <div class="preview-row">
       <div class="preview-label">Syarikat Pembekal</div>
       <div class="preview-value">${escapeHtml(asset.syarikatPembekal||'-')}</div>
     </div>
@@ -2967,6 +2975,8 @@ function borangPembekalanBody(a){
       <tr><td class="lbl">Nama Pengguna</td><td class="val">${escapeHtml(a.namaPengguna||'')}</td></tr>
       <tr><td class="lbl">Bahagian</td><td class="val">${escapeHtml(a.bahagian||'')}</td></tr>
       <tr><td class="lbl">Venue</td><td class="val">${escapeHtml(a.venue||'')}</td></tr>
+      <tr><td class="lbl">Tarikh Penyerahan</td><td class="val">${a.tarikhPenyerahan ? fmtDate(a.tarikhPenyerahan) : ''}</td></tr>
+      <tr><td class="lbl">Lokasi</td><td class="val">${escapeHtml(a.lokasi||'')}</td></tr>
       <tr><td class="lbl">Jenis (Kategori)</td><td class="val">${escapeHtml(jenis)}</td></tr>
       <tr><td class="lbl">Jenama</td><td class="val">${escapeHtml(a.jenama||'')}</td></tr>
       <tr><td class="lbl">Model</td><td class="val">${escapeHtml(a.model||'')}</td></tr>
