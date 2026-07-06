@@ -1,4 +1,4 @@
-const CACHE_NAME = 'aset-ict-msn-v1';
+const CACHE_NAME = 'aset-ict-msn-v2';
 const APP_SHELL = ['./', './index.html'];
 
 self.addEventListener('install', (event) => {

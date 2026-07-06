@@ -408,10 +408,11 @@
       </div>
     </div>
     <nav class="no-print">
-      <button class="tab active" data-view="dashboard">Papan Pemuka</button>
+      <button class="tab active" data-view="dashboard">Dashboard</button>
       <button class="tab" data-view="list">Senarai Aset</button>
       <button class="tab" data-view="maintenance">Penyenggaraan</button>
       <button class="tab" data-view="report">Laporan</button>
+      <button class="tab" data-view="statusHistory">Status History</button>
     </nav>
   </header>
   <main id="main"></main>
@@ -756,6 +757,7 @@ async function executeDangerDelete(){
 /* Field set diselaraskan dengan Borang Pembekalan (KEW.PA-3 / Lampiran B) Cawangan Teknologi Maklumat */
 const JENIS_OPTIONS = ['Komputer Riba','Komputer Meja','Monitor','Pencetak','Projektor','Router / Switch','UPS','Telefon Pintar','Lain-lain'];
 const VENUE_OPTIONS = ['HQ MSN, Bukit Jalil','Kompleks Sukan MSN Setiawangsa','Kompleks Sukan MSN Kg. Pandan','Velodrom Basikal, Nilai','Kompleks Sukan Nilai','Kompleks Sukan MSN Asahan','Kompleks Sukan MSN Rompin','Kompleks Pelayaran, Langkawi','Akademi Mokhtar Dahari, Gambang'];
+const BAHAGIAN_OPTIONS = ['PEJABAT KP','PEJABAT TKP(P)','PEJABAT TKP(S)','KHIDMAT PENGURUSAN','KEWANGAN','ATLET','PARA','PEMBANGUNAN BAKAT','PENGURUSAN ACARA DAN SUKAN','MACE','KORPORAT','FASILITI'];
 const MAINT_JENIS_OPTIONS = ['Komputer','Laptop','Printer'];
 const MAINT_CHECKLIST = [
   { key:'os', title:'Operating System (OS)', items:[
@@ -796,11 +798,12 @@ const MAINT_CHECKLIST = [
     ['kbCable','Check Cable']
   ]}
 ];
-const STATUS_OPTIONS = ['Aktif','Simpanan','Baik Pulih','Dilupuskan'];
+const STATUS_OPTIONS = ['Aktif','Baik Pulih','Dipindah Milik','Permohonan Lupus','Dilupuskan'];
 const STATUS_STYLE = {
   'Aktif':{bg:'var(--status-aktif-bg)', color:'var(--status-aktif)'},
-  'Simpanan':{bg:'var(--status-simpanan-bg)', color:'var(--status-simpanan)'},
   'Baik Pulih':{bg:'var(--status-baikpulih-bg)', color:'var(--status-baikpulih)'},
+  'Dipindah Milik':{bg:'var(--status-simpanan-bg)', color:'var(--status-simpanan)'},
+  'Permohonan Lupus':{bg:'var(--status-baikpulih-bg)', color:'var(--status-baikpulih)'},
   'Dilupuskan':{bg:'var(--status-dilupus-bg)', color:'var(--status-dilupus)'}
 };
 const PAGE_SIZE = 20;
@@ -824,6 +827,7 @@ try{
 const db = firebaseReady ? firebase.firestore() : null;
 const assetsCollection = firebaseReady ? db.collection('assets') : null;
 const maintenanceCollection = firebaseReady ? db.collection('maintenance') : null;
+const statusHistoryCollection = firebaseReady ? db.collection('statusHistory') : null;
 const usersCollection = firebaseReady ? db.collection('users') : null;
 const userDirectoryCollection = firebaseReady ? db.collection('userDirectory') : null;
 
@@ -940,7 +944,7 @@ async function initAuthAndListener(){
         updateProfileUI();
         showApp();
         initAssetsListener();
-        initMaintenanceListener();
+        initMaintenanceListener();        initStatusHistoryListener();
       } else {
         clearSession();
         showLogin();
@@ -981,7 +985,7 @@ async function initAuthAndListener(){
         updateProfileUI();
         showApp();
         initAssetsListener();
-        initMaintenanceListener();
+        initMaintenanceListener();        initStatusHistoryListener();
       }
     }catch(err){
       errorBox.textContent = 'Nama pengguna atau kata laluan salah. Sila cuba lagi.';
@@ -1024,7 +1028,7 @@ async function initAuthAndListener(){
       pendingLoginUsername = null;
       showApp();
       initAssetsListener();
-      initMaintenanceListener();
+      initMaintenanceListener();      initStatusHistoryListener();
     }catch(err){
       console.error(err);
       errorBox.textContent = 'Gagal simpan kata laluan baharu. Cuba lagi.';
@@ -1215,6 +1219,8 @@ let assets = [];
 let loaded = false;
 let maintenanceRecords = [];
 let maintenanceLoaded = false;
+let statusHistory = [];
+let statusHistorySearchTerm = '';
 let currentMaintPage = 1;
 let maintSearchTerm = '';
 let maintSortBy = 'tarikh';
@@ -1225,6 +1231,7 @@ let searchTerm = '';
 let filterStatus = 'all';
 let filterJenis = 'all';
 let filterVenue = 'all';
+let filterBahagian = 'all';
 let reportSection = 'aset';
 let reportMode = 'ringkasan';
 let maintReportMode = 'ringkasan';
@@ -1275,6 +1282,18 @@ function initMaintenanceListener(){
   );
 }
 
+function initStatusHistoryListener(){
+  statusHistoryCollection.orderBy('changedAt', 'desc').onSnapshot(
+    (snapshot) => {
+      statusHistory = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      if(currentView === 'statusHistory') render();
+    },
+    (err) => {
+      console.error('Status history listener error:', err);
+    }
+  );
+}
+
 function render(){
   document.getElementById('subCount').textContent = loaded
     ? `${assets.length} aset direkodkan`
@@ -1288,6 +1307,7 @@ function render(){
   if(currentView === 'dashboard') main.innerHTML = renderDashboard();
   else if(currentView === 'list') main.innerHTML = renderList();
   else if(currentView === 'maintenance') main.innerHTML = renderMaintenance();
+  else if(currentView === 'statusHistory') main.innerHTML = renderStatusHistory();
   else main.innerHTML = renderReport();
   attachViewHandlers();
 }
@@ -1323,7 +1343,10 @@ function renderDashboard(){
     <div class="grid-metrics">
       <div class="metric-card accent"><div class="label">Jumlah aset</div><div class="value">${assets.length}</div></div>
       <div class="metric-card"><div class="label">Aktif</div><div class="value">${byStatus['Aktif']||0}</div></div>
-      <div class="metric-card"><div class="label">Baik pulih</div><div class="value">${byStatus['Baik Pulih']||0}</div></div>
+      <div class="metric-card"><div class="label">Baik Pulih</div><div class="value">${byStatus['Baik Pulih']||0}</div></div>
+      <div class="metric-card"><div class="label">Dipindah Milik</div><div class="value">${byStatus['Dipindah Milik']||0}</div></div>
+      <div class="metric-card"><div class="label">Permohonan Lupus</div><div class="value">${byStatus['Permohonan Lupus']||0}</div></div>
+      <div class="metric-card"><div class="label">Dilupuskan</div><div class="value">${byStatus['Dilupuskan']||0}</div></div>
       <div class="metric-card"><div class="label">Jumlah nilai perolehan</div><div class="value" style="font-size:20px;">${fmtRM(totalNilai(assets))}</div></div>
     </div>
     <div class="panel">
@@ -1347,6 +1370,7 @@ function getFiltered(){
   return assets.filter(a=>{
     if(filterStatus !== 'all' && a.status !== filterStatus) return false;
     if(filterJenis !== 'all' && a.jenisPeralatan !== filterJenis) return false;
+    if(filterBahagian !== 'all' && a.bahagian !== filterBahagian) return false;
     if(filterVenue !== 'all' && a.venue !== filterVenue) return false;
     if(searchTerm){
       const hay = [a.noAset,a.noSiri,a.namaPengguna,a.jenama,a.model,a.bahagian,a.venue,a.syarikatPembekal,a.noBaucar,a.jenisLain].join(' ').toLowerCase();
@@ -1365,6 +1389,7 @@ function renderList(){
   const jenisOptionsHtml = JENIS_OPTIONS.map(j=>`<option value="${j}" ${filterJenis===j?'selected':''}>${j}</option>`).join('');
   const venueOptionsHtml = VENUE_OPTIONS.map(v=>`<option value="${v}" ${filterVenue===v?'selected':''}>${v}</option>`).join('');
   const statusOptionsHtml = STATUS_OPTIONS.map(s=>`<option value="${s}" ${filterStatus===s?'selected':''}>${s}</option>`).join('');
+  const bahagianOptionsHtml = BAHAGIAN_OPTIONS.map(b=>`<option value="${b}" ${filterBahagian===b?'selected':''}>${b}</option>`).join('');
 
   let tableBody;
   if(assets.length === 0){
@@ -1412,12 +1437,9 @@ function renderList(){
         <input type="text" id="searchInput" placeholder="Cari no. aset, no. siri, nama, bahagian, pembekal..." value="${escapeHtml(searchTerm)}">
       </div>
       <select id="filterJenis"><option value="all">Semua jenis</option>${jenisOptionsHtml}</select>
-      <select id="filterVenue"><option value="all">Semua venue</option>${venueOptionsHtml}</select>
+      <select id="filterBahagian"><option value="all">Semua bahagian</option>${bahagianOptionsHtml}</select>
+      <select id="filterVenue" style="display:${filterBahagian==='FASILITI'?'':'none'};"><option value="all">Semua venue</option>${venueOptionsHtml}</select>
       <select id="filterStatus"><option value="all">Semua status</option>${statusOptionsHtml}</select>
-      <button class="btn" id="btnPrintList">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></svg>
-        Borang Daftar Aset
-      </button>
       <button class="btn" id="btnImportCsv">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
         Import CSV
@@ -1511,11 +1533,25 @@ function renderAssetReport(){
     </div>
     ${reportMode === 'ringkasan' ? summaryBlock : detailBlock}
     <div class="panel no-print">
-      <h3>Borang Pengesahan Perkakasan ICT</h3>
-      <p style="font-size:12.5px; color:var(--ink-soft); margin:-6px 0 14px;">Jana senarai peralatan ikut lokasi untuk pengesahan fizikal oleh Pemeriksa/Juruteknik dan Pengurus Venue.</p>
+      <h3>Cetak Borang Daftar</h3>
+      <p style="font-size:12.5px; color:var(--ink-soft); margin:-6px 0 14px;">Cetak borang daftar aset secara pukal mengikut tapisan tarikh diterima, Bahagian, Status, Venue dan/atau Jenis.</p>
       <div class="toolbar" style="margin-bottom:0;">
-        <select id="confirmVenueSelect">
-          <option value="all">Semua Lokasi</option>
+        <button class="btn btn-primary" id="btnPrintList">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></svg>
+          Cetak Borang Daftar
+        </button>
+      </div>
+    </div>
+    <div class="panel no-print">
+      <h3>Borang Pengesahan Perkakasan ICT</h3>
+      <p style="font-size:12.5px; color:var(--ink-soft); margin:-6px 0 14px;">Jana senarai peralatan ikut Bahagian (dan Venue jika Fasiliti) untuk pengesahan fizikal oleh Pemeriksa/Juruteknik dan Pengarah Bahagian / Pengurus Venue.</p>
+      <div class="toolbar" style="margin-bottom:0;">
+        <select id="confirmBahagianSelect">
+          <option value="all">Semua Bahagian</option>
+          ${BAHAGIAN_OPTIONS.map(b=>`<option value="${escapeHtml(b)}">${escapeHtml(b)}</option>`).join('')}
+        </select>
+        <select id="confirmVenueSelect" style="display:none;">
+          <option value="all">Semua Venue</option>
           ${VENUE_OPTIONS.map(v=>`<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('')}
         </select>
         <button class="btn btn-primary" id="btnGenerateConfirmForm">
@@ -1614,6 +1650,63 @@ function exportMaintenanceCSV(){
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
   showToast('Fail CSV dimuat turun.');
+}
+
+function fmtDateTime(ts){
+  if(!ts) return '-';
+  let dt;
+  if(ts.toDate) dt = ts.toDate();          // Firestore Timestamp
+  else if(ts.seconds) dt = new Date(ts.seconds*1000);
+  else dt = new Date(ts);
+  if(isNaN(dt)) return '-';
+  return dt.toLocaleDateString('ms-MY',{day:'2-digit',month:'short',year:'numeric'}) + ', ' + dt.toLocaleTimeString('ms-MY',{hour:'2-digit',minute:'2-digit'});
+}
+
+function renderStatusHistory(){
+  const term = statusHistorySearchTerm.trim().toLowerCase();
+  let filtered = statusHistory.slice();
+  if(term){
+    filtered = filtered.filter(h => (h.noAset||'').toLowerCase().includes(term));
+  }
+
+  const tableBody = filtered.length === 0
+    ? `<div class="panel empty-state"><h3>${statusHistory.length === 0 ? 'Tiada sejarah perubahan status' : 'Tiada rekod sepadan'}</h3><p>${statusHistory.length === 0 ? 'Perubahan status aset akan direkodkan di sini secara automatik.' : 'Cuba kata kunci carian lain.'}</p></div>`
+    : `<div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>No. Aset</th><th>Nama Pengguna</th><th>Status Lama</th><th>Status Baharu</th><th>Diubah Oleh</th><th>Tarikh &amp; Masa</th>
+          </tr></thead>
+          <tbody>
+          ${filtered.map(h => {
+            const stLama = STATUS_STYLE[h.statusLama] || {};
+            const stBaharu = STATUS_STYLE[h.statusBaharu] || {};
+            return `<tr>
+              <td class="mono">${escapeHtml(h.noAset||'-')}</td>
+              <td>${escapeHtml(h.namaPengguna||'-')}</td>
+              <td><span class="status-badge" style="background:${stLama.bg||'var(--surface)'}; color:${stLama.color||'var(--ink)'}">${escapeHtml(h.statusLama||'-')}</span></td>
+              <td><span class="status-badge" style="background:${stBaharu.bg||'var(--surface)'}; color:${stBaharu.color||'var(--ink)'}">${escapeHtml(h.statusBaharu||'-')}</span></td>
+              <td>${escapeHtml(h.changedByName||h.changedBy||'-')}</td>
+              <td>${fmtDateTime(h.changedAt)}</td>
+            </tr>`;
+          }).join('')}
+          </tbody>
+        </table>
+      </div>`;
+
+  return `
+    <div class="panel" style="margin-bottom:16px;">
+      <h3>Sejarah Perubahan Status Aset</h3>
+      <p style="font-size:12.5px; color:var(--ink-soft); margin:-6px 0 0;">Rekod automatik setiap kali status aset diubah — termasuk status lama, status baharu, siapa yang mengubah, dan bila.</p>
+    </div>
+    <div class="toolbar">
+      <div class="search-box">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input type="text" id="statusHistorySearch" placeholder="Cari no. aset..." value="${escapeHtml(statusHistorySearchTerm)}">
+      </div>
+      <span style="font-size:12.5px; color:var(--ink-soft); align-self:center;">${filtered.length} rekod</span>
+    </div>
+    ${tableBody}
+  `;
 }
 
 function renderReport(){
@@ -1781,16 +1874,32 @@ function openBulkPrintAssetModal(){
   overlay.id = 'bulkPrintAssetOverlay';
   const venueOptionsHtml = VENUE_OPTIONS.map(v=>`<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
   const jenisOptionsHtml = JENIS_OPTIONS.map(j=>`<option value="${escapeHtml(j)}">${escapeHtml(j)}</option>`).join('');
+  const bahagianOptionsHtml = BAHAGIAN_OPTIONS.map(b=>`<option value="${escapeHtml(b)}">${escapeHtml(b)}</option>`).join('');
+  const statusOptionsHtml = STATUS_OPTIONS.map(s=>`<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
   overlay.innerHTML = `
     <div class="modal" style="max-width:420px;">
       <div class="modal-head">
         <h3>Cetak Pukal Borang Daftar Aset</h3>
         <button id="closeBulkPrintAssetModal" aria-label="Tutup"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
       </div>
-      <div class="modal-sub">Pilih julat tarikh, Venue dan/atau Jenis (Kategori) untuk cetak beberapa borang sekali gus.</div>
+      <div class="modal-sub">Pilih julat tarikh diterima, Bahagian, Status, Venue dan/atau Jenis untuk cetak beberapa borang sekali gus.</div>
       <div class="form-grid">
-        <div class="field"><label>Tarikh Dari</label><input type="date" id="bulkAssetFrom"></div>
-        <div class="field"><label>Tarikh Hingga</label><input type="date" id="bulkAssetTo"></div>
+        <div class="field"><label>Tarikh Diterima Dari</label><input type="date" id="bulkAssetFrom"></div>
+        <div class="field"><label>Tarikh Diterima Hingga</label><input type="date" id="bulkAssetTo"></div>
+        <div class="field full">
+          <label>Bahagian</label>
+          <select id="bulkAssetBahagian">
+            <option value="all">Semua Bahagian</option>
+            ${bahagianOptionsHtml}
+          </select>
+        </div>
+        <div class="field full">
+          <label>Status</label>
+          <select id="bulkAssetStatus">
+            <option value="all">Semua Status</option>
+            ${statusOptionsHtml}
+          </select>
+        </div>
         <div class="field full">
           <label>Venue</label>
           <select id="bulkAssetVenue">
@@ -1823,11 +1932,15 @@ function openBulkPrintAssetModal(){
   function getMatching(){
     const from = document.getElementById('bulkAssetFrom').value;
     const to = document.getElementById('bulkAssetTo').value;
+    const bahagian = document.getElementById('bulkAssetBahagian').value;
+    const status = document.getElementById('bulkAssetStatus').value;
     const venue = document.getElementById('bulkAssetVenue').value;
     const jenis = document.getElementById('bulkAssetJenis').value;
     return assets.filter(a => {
       if(from && (!a.tarikhTerima || a.tarikhTerima < from)) return false;
       if(to && (!a.tarikhTerima || a.tarikhTerima > to)) return false;
+      if(bahagian !== 'all' && a.bahagian !== bahagian) return false;
+      if(status !== 'all' && a.status !== status) return false;
       if(venue !== 'all' && a.venue !== venue) return false;
       if(jenis !== 'all' && a.jenisPeralatan !== jenis) return false;
       return true;
@@ -1839,6 +1952,8 @@ function openBulkPrintAssetModal(){
   }
   document.getElementById('bulkAssetFrom').addEventListener('change', updatePreview);
   document.getElementById('bulkAssetTo').addEventListener('change', updatePreview);
+  document.getElementById('bulkAssetBahagian').addEventListener('change', updatePreview);
+  document.getElementById('bulkAssetStatus').addEventListener('change', updatePreview);
   document.getElementById('bulkAssetVenue').addEventListener('change', updatePreview);
   document.getElementById('bulkAssetJenis').addEventListener('change', updatePreview);
   updatePreview();
@@ -2261,12 +2376,11 @@ function printMaintenanceBulk(records){
   w.document.close();
 }
 
-function printPengesahanPerkakasan(venue, assetList){
+function printPengesahanPerkakasan(lokasiLabel, assetList, useVenueManager){
   if(!assetList || assetList.length === 0){
-    showToast('Tiada aset dijumpai untuk lokasi ini.');
+    showToast('Tiada aset dijumpai untuk kriteria ini.');
     return;
   }
-  const lokasiLabel = venue === 'all' ? 'Semua Lokasi' : venue;
   const rows = assetList.map((a, i) => `
     <tr>
       <td style="text-align:center;">${i+1}</td>
@@ -2276,12 +2390,17 @@ function printPengesahanPerkakasan(venue, assetList){
       <td class="mono">${escapeHtml(a.noAset||'-')}</td>
       <td>${escapeHtml(a.namaPengguna||'-')}</td>
       <td>${escapeHtml(a.venue||'-')}</td>
+      <td>${escapeHtml(a.status||'-')}</td>
     </tr>`).join('');
   const blankRows = Array.from({length: 3}).map((_, i) => `
     <tr>
       <td style="text-align:center;">${assetList.length + i + 1}</td>
-      <td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td>
+      <td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td>
     </tr>`).join('');
+
+  const pengesahanKedua = useVenueManager
+    ? { title: 'PENGESAHAN PENGURUS VENUE', desc: 'Saya dengan ini mengesahkan bahawa perkakasan dinyatakan berada di lokasi dinyatakan.' }
+    : { title: 'PENGESAHAN PENGARAH BAHAGIAN', desc: 'Saya dengan ini mengesahkan bahawa perkakasan dinyatakan adalah di bawah tanggungjawab bahagian ini.' };
 
   const html = `<!DOCTYPE html><html lang="ms"><head><meta charset="UTF-8"><title>Borang Pengesahan Perkakasan ICT - ${escapeHtml(lokasiLabel)}</title>
   <style>
@@ -2316,18 +2435,19 @@ function printPengesahanPerkakasan(venue, assetList){
       <div class="titles"><div class="doc-title">BORANG PENGESAHAN PERKAKASAN ICT</div></div>
     </div>
     <table class="top">
-      <tr><td><b>LOKASI UTAMA:</b> ${escapeHtml(lokasiLabel)}</td></tr>
+      <tr><td><b>BAHAGIAN / LOKASI:</b> ${escapeHtml(lokasiLabel)}</td></tr>
     </table>
     <div class="section-title">1. SENARAI PERKAKASAN ICT</div>
     <table class="senarai">
       <thead><tr>
-        <th style="width:5%;">BIL</th>
-        <th style="width:15%;">PERKAKASAN</th>
-        <th style="width:18%;">PERINCIAN</th>
-        <th style="width:14%;">NO. SIRI</th>
-        <th style="width:14%;">NO. ASET</th>
-        <th style="width:17%;">NAMA KAKITANGAN</th>
-        <th style="width:17%;">LOKASI</th>
+        <th style="width:4%;">BIL</th>
+        <th style="width:13%;">PERKAKASAN</th>
+        <th style="width:16%;">PERINCIAN</th>
+        <th style="width:13%;">NO. SIRI</th>
+        <th style="width:13%;">NO. ASET</th>
+        <th style="width:15%;">NAMA KAKITANGAN</th>
+        <th style="width:14%;">LOKASI</th>
+        <th style="width:12%;">STATUS</th>
       </tr></thead>
       <tbody>
         ${rows}
@@ -2344,8 +2464,8 @@ function printPengesahanPerkakasan(venue, assetList){
         <div class="sig-line-row"><span>TARIKH:</span><span>………………………………………………</span></div>
       </div>
       <div>
-        <div class="pg-title">PENGESAHAN PENGURUS VENUE</div>
-        <div>Saya dengan ini mengesahkan bahawa perkakasan dinyatakan berada di lokasi dinyatakan.</div>
+        <div class="pg-title">${pengesahanKedua.title}</div>
+        <div>${pengesahanKedua.desc}</div>
         <div class="sig-pen-space"></div>
         <div class="sig-line-row"><span>TANDATANGAN:</span><span>………………………………………………</span></div>
         <div class="sig-line-row"><span>TARIKH:</span><span>………………………………………………</span></div>
@@ -2361,7 +2481,7 @@ function printPengesahanPerkakasan(venue, assetList){
 
 function openForm(asset){
   editingId = asset ? asset.id : null;
-  const a = asset || {noAset:'',noSiri:'',jenisPeralatan:JENIS_OPTIONS[0],jenama:'',model:'',namaPengguna:'',bahagian:'',venue:'',syarikatPembekal:'',hargaPerolehan:'',tarikhTerima:'',noBaucar:'',status:'Aktif',catatan:''};
+  const a = asset || {noAset:'',noSiri:'',jenisPeralatan:JENIS_OPTIONS[0],jenama:'',model:'',namaPengguna:'',bahagian:'',venue:'',tarikhPenyerahan:'',lokasi:'',syarikatPembekal:'',hargaPerolehan:'',tarikhTerima:'',noBaucar:'',status:'Aktif',catatan:''};
   const overlay = document.createElement('div');
   overlay.className = 'overlay';
   overlay.id = 'formOverlay';
@@ -2389,13 +2509,16 @@ function openForm(asset){
 
           <div class="form-section-label">Butiran pengguna</div>
           <div class="field"><label>Nama Pengguna *</label><input type="text" name="namaPengguna" required value="${escapeHtml(a.namaPengguna)}"></div>
-          <div class="field"><label>Bahagian</label><input type="text" name="bahagian" value="${escapeHtml(a.bahagian)}"></div>
-          <div class="field full"><label>Venue</label>
+          <div class="field"><label>Bahagian</label><select name="bahagian">${BAHAGIAN_OPTIONS.map(b => `<option value="${escapeHtml(b)}" ${a.bahagian === b ? 'selected' : ''}>${escapeHtml(b)}</option>`).join('')}</select></div>
+          <div class="field full" id="venueFieldWrap" style="display:none;">
+            <label>Venue</label>
             <select name="venue">
               <option value="" ${!a.venue?'selected':''}>-- Pilih Venue --</option>
               ${VENUE_OPTIONS.map(v=>`<option value="${v}" ${a.venue===v?'selected':''}>${v}</option>`).join('')}
             </select>
           </div>
+          <div class="field"><label>Tarikh Penyerahan</label><input type="date" name="tarikhPenyerahan" value="${escapeHtml(a.tarikhPenyerahan)}"></div>
+          <div class="field"><label>Lokasi</label><input type="text" name="lokasi" value="${escapeHtml(a.lokasi)}" placeholder="cth: Pejabat, Bilik Server, Stor"></div>
 
           <div class="form-section-label">Butiran perolehan</div>
           <div class="field"><label>Nama Syarikat Pembekal</label><input type="text" name="syarikatPembekal" value="${escapeHtml(a.syarikatPembekal)}"></div>
@@ -2434,6 +2557,17 @@ function openForm(asset){
     if(!isLain) jenisLainInput.value = '';
   }
   jenisSelect.addEventListener('change', toggleJenisLain);
+
+  const bahagianSelect = document.querySelector('select[name="bahagian"]');
+  const venueFieldWrap = document.getElementById('venueFieldWrap');
+  const venueSelect = document.querySelector('select[name="venue"]');
+  function toggleVenueField(){
+    const isFasiliti = bahagianSelect.value === 'FASILITI';
+    venueFieldWrap.style.display = isFasiliti ? 'block' : 'none';
+    if(!isFasiliti) venueSelect.value = ''; // Clear venue jika bukan FASILITI
+  }
+  bahagianSelect.addEventListener('change', toggleVenueField);
+  toggleVenueField(); // Run on form load to set initial state
 }
 
 function closeForm(){
@@ -2453,9 +2587,10 @@ async function handleFormSubmit(e){
   const errorBox = document.getElementById('noAsetError');
   errorBox.style.display = 'none';
   const newNoAset = (data.noAset || '').trim().toLowerCase();
-  const duplicate = assets.find(x => (x.noAset||'').trim().toLowerCase() === newNoAset && x.id !== editingId);
+  // Duplicate check: block only if an existing asset with same No. Aset is NOT "Dipindah Milik"
+  const duplicate = assets.find(x => (x.noAset||'').trim().toLowerCase() === newNoAset && x.id !== editingId && x.status !== 'Dipindah Milik');
   if(duplicate){
-    errorBox.textContent = `No. Aset "${data.noAset}" sudah wujud dalam sistem (digunakan oleh: ${duplicate.namaPengguna||'-'}). Sila semak atau gunakan No. Aset yang lain.`;
+    errorBox.textContent = `No. Aset "${data.noAset}" sudah wujud dalam sistem (digunakan oleh: ${duplicate.namaPengguna||'-'}, status: ${duplicate.status||'-'}). Sila semak atau gunakan No. Aset yang lain.`;
     errorBox.style.display = 'block';
     document.getElementById('formNoAset').focus();
     return;
@@ -2463,7 +2598,29 @@ async function handleFormSubmit(e){
 
   try{
     if(editingId){
+      // Detect status change for history logging
+      const existingAsset = assets.find(x => x.id === editingId);
+      const oldStatus = existingAsset ? existingAsset.status : null;
+      const newStatus = data.status;
+
       await assetsCollection.doc(editingId).set(data, {merge:true});
+
+      if(oldStatus && newStatus && oldStatus !== newStatus){
+        try{
+          await statusHistoryCollection.doc(uid()).set({
+            noAset: data.noAset || (existingAsset ? existingAsset.noAset : ''),
+            assetId: editingId,
+            namaPengguna: data.namaPengguna || '',
+            statusLama: oldStatus,
+            statusBaharu: newStatus,
+            changedBy: currentUser ? currentUser.username : '',
+            changedByName: currentUser ? currentUser.namaPenuh : '',
+            changedAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+        }catch(logErr){
+          console.error('Gagal rekod sejarah status:', logErr);
+        }
+      }
       showToast('Aset dikemaskini.');
     } else {
       if(currentUser){
@@ -2491,9 +2648,86 @@ async function deleteAsset(id){
   }
 }
 
-function exportCSV(){
-  const headers = ['No. Aset','No Casis/Siri Pembuat','Jenis (Kategori)','Jenama','Model','Nama Pengguna','Bahagian','Venue','Nama Syarikat Pembekal','Harga Perolehan Asal (RM)','No. Baucar','Tarikh Diterima','Status','Catatan'];
-  const rows = assets.map(a => [a.noAset,a.noSiri,jenisLabel(a),a.jenama,a.model,a.namaPengguna,a.bahagian,a.venue,a.syarikatPembekal,a.hargaPerolehan,a.noBaucar,a.tarikhTerima,a.status,a.catatan]);
+function openExportCsvModal(){
+  const overlay = document.createElement('div');
+  overlay.className = 'overlay';
+  overlay.id = 'exportCsvOverlay';
+  const bahagianOptionsHtml = BAHAGIAN_OPTIONS.map(b=>`<option value="${escapeHtml(b)}">${escapeHtml(b)}</option>`).join('');
+  const statusOptionsHtml = STATUS_OPTIONS.map(s=>`<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
+  overlay.innerHTML = `
+    <div class="modal" style="max-width:420px;">
+      <div class="modal-head">
+        <h3>Eksport CSV</h3>
+        <button id="closeExportCsvModal" aria-label="Tutup"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+      </div>
+      <div class="modal-sub">Pilih tapisan Bahagian dan/atau Status untuk eksport. Biar "Semua" untuk eksport seluruh rekod.</div>
+      <div class="form-grid">
+        <div class="field full">
+          <label>Bahagian</label>
+          <select id="exportBahagian">
+            <option value="all">Semua Bahagian</option>
+            ${bahagianOptionsHtml}
+          </select>
+        </div>
+        <div class="field full">
+          <label>Status</label>
+          <select id="exportStatus">
+            <option value="all">Semua Status</option>
+            ${statusOptionsHtml}
+          </select>
+        </div>
+      </div>
+      <div id="exportCsvPreviewCount" style="font-size:12.5px; color:var(--ink-soft); margin-top:14px;"></div>
+      <div class="modal-foot">
+        <button type="button" class="btn" id="cancelExportCsv">Batal</button>
+        <button type="button" class="btn btn-primary" id="confirmExportCsv">Eksport</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  document.getElementById('closeExportCsvModal').onclick = closeExportCsvModal;
+  document.getElementById('cancelExportCsv').onclick = closeExportCsvModal;
+  let mouseDownOnBackdrop = false;
+  overlay.addEventListener('mousedown', e => { mouseDownOnBackdrop = (e.target === overlay); });
+  overlay.addEventListener('mouseup', e => { if(mouseDownOnBackdrop && e.target === overlay) closeExportCsvModal(); mouseDownOnBackdrop = false; });
+
+  function getMatching(){
+    const bahagian = document.getElementById('exportBahagian').value;
+    const status = document.getElementById('exportStatus').value;
+    return assets.filter(a => {
+      if(bahagian !== 'all' && a.bahagian !== bahagian) return false;
+      if(status !== 'all' && a.status !== status) return false;
+      return true;
+    });
+  }
+  function updatePreview(){
+    const count = getMatching().length;
+    document.getElementById('exportCsvPreviewCount').textContent = `${count} rekod akan dieksport.`;
+  }
+  document.getElementById('exportBahagian').addEventListener('change', updatePreview);
+  document.getElementById('exportStatus').addEventListener('change', updatePreview);
+  updatePreview();
+
+  document.getElementById('confirmExportCsv').onclick = () => {
+    const matching = getMatching();
+    if(matching.length === 0){
+      showToast('Tiada rekod sepadan dengan tapisan ini.');
+      return;
+    }
+    exportCSV(matching);
+    closeExportCsvModal();
+  };
+}
+
+function closeExportCsvModal(){
+  const overlay = document.getElementById('exportCsvOverlay');
+  if(overlay) overlay.remove();
+}
+
+function exportCSV(assetList){
+  const list = assetList || assets;
+  const headers = ['No. Aset','No Casis/Siri Pembuat','Jenis (Kategori)','Jenama','Model','Nama Pengguna','Bahagian','Venue','Tarikh Penyerahan','Lokasi','Nama Syarikat Pembekal','Harga Perolehan Asal (RM)','No. Baucar','Tarikh Diterima','Status','Catatan'];
+  const rows = list.map(a => [a.noAset,a.noSiri,jenisLabel(a),a.jenama,a.model,a.namaPengguna,a.bahagian,a.venue,a.tarikhPenyerahan,a.lokasi,a.syarikatPembekal,a.hargaPerolehan,a.noBaucar,a.tarikhTerima,a.status,a.catatan]);
   const csvContent = [headers, ...rows].map(row =>
     row.map(cell => `"${(cell||'').toString().replace(/"/g,'""')}"`).join(',')
   ).join('\n');
@@ -2578,7 +2812,8 @@ function openCsvImportModal(file){
       const rawRows = results.data;
       const allMapped = rawRows.map(mapCsvRowToAsset).filter(r => r.noAset);
 
-      const existingNoAsetSet = new Set(assets.map(a => (a.noAset||'').trim().toLowerCase()));
+      // Only assets NOT "Dipindah Milik" count as blocking duplicates
+      const existingNoAsetSet = new Set(assets.filter(a => a.status !== 'Dipindah Milik').map(a => (a.noAset||'').trim().toLowerCase()));
       const seenInFile = new Set();
       const validRows = [];
       const duplicateRows = [];
@@ -2832,11 +3067,27 @@ function attachViewHandlers(){
   const btnBulkPrintMaint = document.getElementById('btnBulkPrintMaint');
   if(btnBulkPrintMaint) btnBulkPrintMaint.onclick = () => openBulkPrintModal();
 
+  const confirmBahagianSelect = document.getElementById('confirmBahagianSelect');
+  const confirmVenueSelect = document.getElementById('confirmVenueSelect');
+  if(confirmBahagianSelect && confirmVenueSelect){
+    confirmBahagianSelect.onchange = () => {
+      const isFasiliti = confirmBahagianSelect.value === 'FASILITI';
+      confirmVenueSelect.style.display = isFasiliti ? '' : 'none';
+      if(!isFasiliti) confirmVenueSelect.value = 'all';
+    };
+  }
   const btnGenerateConfirmForm = document.getElementById('btnGenerateConfirmForm');
   if(btnGenerateConfirmForm) btnGenerateConfirmForm.onclick = () => {
-    const venue = document.getElementById('confirmVenueSelect').value;
-    const filtered = venue === 'all' ? assets.slice() : assets.filter(a => a.venue === venue);
-    printPengesahanPerkakasan(venue, filtered);
+    const bahagian = confirmBahagianSelect.value;
+    const venue = confirmVenueSelect.value;
+    let filtered = assets.slice();
+    if(bahagian !== 'all') filtered = filtered.filter(a => a.bahagian === bahagian);
+    if(bahagian === 'FASILITI' && venue !== 'all') filtered = filtered.filter(a => a.venue === venue);
+
+    // Tentukan label pengesahan: Pengurus Venue jika venue spesifik (bukan HQ) dipilih, jika tidak Pengarah Bahagian
+    const useVenueManager = (bahagian === 'FASILITI' && venue !== 'all' && venue !== 'HQ MSN, Bukit Jalil');
+    const label = bahagian === 'all' ? 'Semua Bahagian' : bahagian + (bahagian === 'FASILITI' && venue !== 'all' ? ' — ' + venue : '');
+    printPengesahanPerkakasan(label, filtered, useVenueManager);
   };
 
   document.querySelectorAll('[data-print-maint]').forEach(btn=>{
@@ -2901,8 +3152,28 @@ function attachViewHandlers(){
       }
     };
   }
+  const statusHistorySearch = document.getElementById('statusHistorySearch');
+  if(statusHistorySearch){
+    statusHistorySearch.oninput = () => {
+      const cursorPos = statusHistorySearch.selectionStart;
+      statusHistorySearchTerm = statusHistorySearch.value;
+      render();
+      const newInput = document.getElementById('statusHistorySearch');
+      if(newInput){
+        newInput.focus();
+        newInput.setSelectionRange(cursorPos, cursorPos);
+      }
+    };
+  }
   const fJenis = document.getElementById('filterJenis');
   if(fJenis) fJenis.onchange = () => { filterJenis = fJenis.value; currentPage = 1; render(); };
+  const fBahagian = document.getElementById('filterBahagian');
+  if(fBahagian) fBahagian.onchange = () => {
+    filterBahagian = fBahagian.value;
+    if(filterBahagian !== 'FASILITI') filterVenue = 'all'; // Reset venue bila bukan FASILITI
+    currentPage = 1;
+    render();
+  };
   const fVenue = document.getElementById('filterVenue');
   if(fVenue) fVenue.onchange = () => { filterVenue = fVenue.value; currentPage = 1; render(); };
   const fStatus = document.getElementById('filterStatus');
@@ -2923,7 +3194,7 @@ function attachViewHandlers(){
   });
 
   const btnExport = document.getElementById('btnExportCsv') || document.getElementById('btnExportCsv2');
-  if(btnExport) btnExport.onclick = exportCSV;
+  if(btnExport) btnExport.onclick = openExportCsvModal;
   const btnPrintList = document.getElementById('btnPrintList');
   if(btnPrintList) btnPrintList.onclick = () => openBulkPrintAssetModal();
 
