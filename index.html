@@ -2754,6 +2754,8 @@ const CSV_HEADER_MAP = {
   'nama pengguna': 'namaPengguna',
   'bahagian': 'bahagian',
   'venue': 'venue',
+  'tarikh penyerahan': 'tarikhPenyerahan',
+  'lokasi': 'lokasi',
   'nama syarikat pembekal': 'syarikatPembekal',
   'harga perolehan asal (rm)': 'hargaPerolehan',
   'no. baucar': 'noBaucar',
@@ -2796,6 +2798,7 @@ function mapCsvRowToAsset(row){
   }
   // Date normalization
   if(mapped.tarikhTerima) mapped.tarikhTerima = normalizeCsvDate(mapped.tarikhTerima);
+  if(mapped.tarikhPenyerahan) mapped.tarikhPenyerahan = normalizeCsvDate(mapped.tarikhPenyerahan);
   // Numeric field
   if(mapped.hargaPerolehan !== undefined && mapped.hargaPerolehan !== ''){
     const num = parseFloat(mapped.hargaPerolehan.toString().replace(/[^0-9.\-]/g,''));
