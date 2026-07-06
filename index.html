@@ -2397,7 +2397,7 @@ function printPengesahanPerkakasan(lokasiLabel, assetList, useVenueManager){
       <td class="mono">${escapeHtml(a.noSiri||'-')}</td>
       <td class="mono">${escapeHtml(a.noAset||'-')}</td>
       <td>${escapeHtml(a.namaPengguna||'-')}</td>
-      <td>${escapeHtml(a.venue||'-')}</td>
+      <td>${escapeHtml(a.lokasi||'-')}</td>
       <td>${escapeHtml(a.status||'-')}</td>
     </tr>`).join('');
   const blankRows = Array.from({length: 3}).map((_, i) => `
@@ -2443,7 +2443,7 @@ function printPengesahanPerkakasan(lokasiLabel, assetList, useVenueManager){
       <div class="titles"><div class="doc-title">BORANG PENGESAHAN PERKAKASAN ICT</div></div>
     </div>
     <table class="top">
-      <tr><td><b>BAHAGIAN / LOKASI:</b> ${escapeHtml(lokasiLabel)}</td></tr>
+      <tr><td><b>BAHAGIAN / VENUE:</b> ${escapeHtml(lokasiLabel)}</td></tr>
     </table>
     <div class="section-title">1. SENARAI PERKAKASAN ICT</div>
     <table class="senarai">
