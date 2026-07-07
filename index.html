@@ -2503,7 +2503,7 @@ function openForm(asset){
       <form id="assetForm">
         <div class="form-grid">
           <div class="form-section-label">Butiran peralatan</div>
-          <div class="field"><label>No. Aset</label><input type="text" name="noAset" id="formNoAset" value="${escapeHtml(a.noAset)}" placeholder="cth: MSN/H/26/01 (opsyonal)"><div id="noAsetError" style="color:var(--status-dilupus); font-size:11.5px; display:none; margin-top:4px;"></div></div>
+          <div class="field"><label>No. Aset</label><input type="text" name="noAset" id="formNoAset" value="${escapeHtml(a.noAset)}" placeholder="cth: MSN/H/26/01"><div id="noAsetError" style="color:var(--status-dilupus); font-size:11.5px; display:none; margin-top:4px;"></div></div>
           <div class="field"><label>Jenis (Kategori) *</label>
             <select name="jenisPeralatan" id="jenisSelect" required>${JENIS_OPTIONS.map(j=>`<option value="${j}" ${a.jenisPeralatan===j?'selected':''}>${j}</option>`).join('')}</select>
           </div>
