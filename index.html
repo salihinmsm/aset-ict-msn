@@ -1229,6 +1229,8 @@ let maintenanceRecords = [];
 let maintenanceLoaded = false;
 let statusHistory = [];
 let statusHistorySearchTerm = '';
+let statusHistoryFilterBahagian = 'all';
+let statusHistoryFilterStatus = 'all';
 let currentMaintPage = 1;
 let maintSearchTerm = '';
 let maintSortBy = 'tarikh';
@@ -1568,6 +1570,46 @@ function renderAssetReport(){
         </button>
       </div>
     </div>
+    <div class="panel no-print">
+      <h3>Jana Laporan Status History</h3>
+      <p style="font-size:12.5px; color:var(--ink-soft); margin:-6px 0 14px;">Jana laporan sejarah perubahan status aset untuk cetakan. Tapis mengikut Bahagian, Venue (jika Fasiliti), dan Status terkini.</p>
+      <div class="toolbar" style="margin-bottom:0;">
+        <select id="histReportBahagian">
+          <option value="all">Semua Bahagian</option>
+          ${BAHAGIAN_OPTIONS.map(b=>`<option value="${escapeHtml(b)}">${escapeHtml(b)}</option>`).join('')}
+        </select>
+        <select id="histReportVenue" style="display:none;">
+          <option value="all">Semua Venue</option>
+          ${VENUE_OPTIONS.map(v=>`<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('')}
+        </select>
+        <select id="histReportStatus">
+          <option value="all">Semua Status (Terkini)</option>
+          ${STATUS_OPTIONS.map(s=>`<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('')}
+        </select>
+        <button class="btn btn-primary" id="btnGenerateHistReport">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></svg>
+          Jana &amp; Cetak Laporan
+        </button>
+      </div>
+    </div>
+    <div class="panel no-print">
+      <h3>Jana Borang Permohonan Lupus</h3>
+      <p style="font-size:12.5px; color:var(--ink-soft); margin:-6px 0 14px;">Jana borang untuk aset yang berstatus "Permohonan Lupus" sahaja, untuk pengesahan dan kelulusan pelupusan. Boleh tapis mengikut Bahagian (dan Venue jika Fasiliti).</p>
+      <div class="toolbar" style="margin-bottom:0;">
+        <select id="lupusBahagianSelect">
+          <option value="all">Semua Bahagian</option>
+          ${BAHAGIAN_OPTIONS.map(b=>`<option value="${escapeHtml(b)}">${escapeHtml(b)}</option>`).join('')}
+        </select>
+        <select id="lupusVenueSelect" style="display:none;">
+          <option value="all">Semua Venue</option>
+          ${VENUE_OPTIONS.map(v=>`<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('')}
+        </select>
+        <button class="btn btn-primary" id="btnGenerateLupusForm">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></svg>
+          Jana &amp; Cetak Borang
+        </button>
+      </div>
+    </div>
   `;
 }
 
@@ -1676,13 +1718,22 @@ function renderStatusHistory(){
   if(term){
     filtered = filtered.filter(h => (h.noAset||'').toLowerCase().includes(term));
   }
+  if(statusHistoryFilterBahagian !== 'all'){
+    filtered = filtered.filter(h => h.bahagian === statusHistoryFilterBahagian);
+  }
+  if(statusHistoryFilterStatus !== 'all'){
+    filtered = filtered.filter(h => h.statusBaharu === statusHistoryFilterStatus);
+  }
+
+  const bahagianOptionsHtml = BAHAGIAN_OPTIONS.map(b=>`<option value="${escapeHtml(b)}" ${statusHistoryFilterBahagian===b?'selected':''}>${escapeHtml(b)}</option>`).join('');
+  const statusOptionsHtml = STATUS_OPTIONS.map(s=>`<option value="${escapeHtml(s)}" ${statusHistoryFilterStatus===s?'selected':''}>${escapeHtml(s)}</option>`).join('');
 
   const tableBody = filtered.length === 0
-    ? `<div class="panel empty-state"><h3>${statusHistory.length === 0 ? 'Tiada sejarah perubahan status' : 'Tiada rekod sepadan'}</h3><p>${statusHistory.length === 0 ? 'Perubahan status aset akan direkodkan di sini secara automatik.' : 'Cuba kata kunci carian lain.'}</p></div>`
+    ? `<div class="panel empty-state"><h3>${statusHistory.length === 0 ? 'Tiada sejarah perubahan status' : 'Tiada rekod sepadan'}</h3><p>${statusHistory.length === 0 ? 'Perubahan status aset akan direkodkan di sini secara automatik.' : 'Cuba kata kunci carian atau tapisan lain.'}</p></div>`
     : `<div class="table-wrap">
         <table>
           <thead><tr>
-            <th>No. Aset</th><th>Nama Pengguna</th><th>Status Lama</th><th>Status Baharu</th><th>Diubah Oleh</th><th>Tarikh &amp; Masa</th>
+            <th>No. Aset</th><th>Nama Pengguna</th><th>Bahagian</th><th>Status Lama</th><th>Status Baharu</th><th>Pengguna Semasa</th><th>Bahagian Semasa</th><th>Tarikh &amp; Masa</th>
           </tr></thead>
           <tbody>
           ${filtered.map(h => {
@@ -1690,10 +1741,12 @@ function renderStatusHistory(){
             const stBaharu = STATUS_STYLE[h.statusBaharu] || {};
             return `<tr>
               <td class="mono">${escapeHtml(h.noAset||'-')}</td>
-              <td>${escapeHtml(h.namaPengguna||'-')}</td>
+              <td><button class="link-btn" data-hist-preview="${h.id}" style="background:none; border:none; color:var(--accent); cursor:pointer; padding:0; font:inherit; text-align:left; text-decoration:underline;">${escapeHtml(h.namaPengguna||'-')}</button></td>
+              <td>${escapeHtml(h.bahagian||'-')}</td>
               <td><span class="status-badge" style="background:${stLama.bg||'var(--surface)'}; color:${stLama.color||'var(--ink)'}">${escapeHtml(h.statusLama||'-')}</span></td>
               <td><span class="status-badge" style="background:${stBaharu.bg||'var(--surface)'}; color:${stBaharu.color||'var(--ink)'}">${escapeHtml(h.statusBaharu||'-')}</span></td>
-              <td>${escapeHtml(h.changedByName||h.changedBy||'-')}</td>
+              <td>${escapeHtml(h.penggunaBaru||'-')}</td>
+              <td>${escapeHtml(h.bahagianBaru||'-')}</td>
               <td>${fmtDateTime(h.changedAt)}</td>
             </tr>`;
           }).join('')}
@@ -1711,10 +1764,59 @@ function renderStatusHistory(){
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.3-4.3"/></svg>
         <input type="text" id="statusHistorySearch" placeholder="Cari no. aset..." value="${escapeHtml(statusHistorySearchTerm)}">
       </div>
+      <select id="statusHistoryFilterBahagian"><option value="all">Semua bahagian</option>${bahagianOptionsHtml}</select>
+      <select id="statusHistoryFilterStatus"><option value="all">Semua status (terkini)</option>${statusOptionsHtml}</select>
       <span style="font-size:12.5px; color:var(--ink-soft); align-self:center;">${filtered.length} rekod</span>
     </div>
     ${tableBody}
   `;
+}
+
+function openStatusHistoryPreview(histId){
+  const h = statusHistory.find(x => x.id === histId);
+  if(!h) return;
+  const stLama = STATUS_STYLE[h.statusLama] || {};
+  const stBaharu = STATUS_STYLE[h.statusBaharu] || {};
+  const isDipindah = h.statusBaharu === 'Dipindah Milik';
+
+  const overlay = document.createElement('div');
+  overlay.className = 'overlay';
+  overlay.id = 'histPreviewOverlay';
+  overlay.innerHTML = `
+    <div class="modal" style="max-width:480px;">
+      <div class="modal-head">
+        <h3>Butiran Perubahan Status</h3>
+        <button id="closeHistPreview" aria-label="Tutup"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+      </div>
+      <div class="preview-body">
+        <div class="preview-row"><div class="preview-label">No. Aset</div><div class="preview-value mono">${escapeHtml(h.noAset||'-')}</div></div>
+        <div class="preview-row"><div class="preview-label">Nama Pengguna</div><div class="preview-value">${escapeHtml(h.namaPengguna||'-')}</div></div>
+        <div class="preview-row"><div class="preview-label">Bahagian</div><div class="preview-value">${escapeHtml(h.bahagian||'-')}</div></div>
+        <div class="preview-row"><div class="preview-label">Status Lama</div><div class="preview-value"><span class="status-badge" style="background:${stLama.bg||'var(--surface)'}; color:${stLama.color||'var(--ink)'}">${escapeHtml(h.statusLama||'-')}</span></div></div>
+        <div class="preview-row"><div class="preview-label">Status Baharu</div><div class="preview-value"><span class="status-badge" style="background:${stBaharu.bg||'var(--surface)'}; color:${stBaharu.color||'var(--ink)'}">${escapeHtml(h.statusBaharu||'-')}</span></div></div>
+        ${isDipindah ? `
+        <div class="preview-row"><div class="preview-label">Pengguna Semasa</div><div class="preview-value">${escapeHtml(h.penggunaBaru||'-')}</div></div>
+        <div class="preview-row"><div class="preview-label">Bahagian Semasa</div><div class="preview-value">${escapeHtml(h.bahagianBaru||'-')}</div></div>
+        ` : ''}
+        <div class="preview-row"><div class="preview-label">Diubah Oleh</div><div class="preview-value">${escapeHtml(h.changedByName||h.changedBy||'-')}</div></div>
+        <div class="preview-row"><div class="preview-label">Tarikh &amp; Masa</div><div class="preview-value">${fmtDateTime(h.changedAt)}</div></div>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn btn-primary" id="closeHistPreview2">Tutup</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  document.getElementById('closeHistPreview').onclick = closeStatusHistoryPreview;
+  document.getElementById('closeHistPreview2').onclick = closeStatusHistoryPreview;
+  let mouseDownBackdrop = false;
+  overlay.addEventListener('mousedown', e => { mouseDownBackdrop = (e.target === overlay); });
+  overlay.addEventListener('mouseup', e => { if(mouseDownBackdrop && e.target === overlay) closeStatusHistoryPreview(); mouseDownBackdrop = false; });
+}
+
+function closeStatusHistoryPreview(){
+  const overlay = document.getElementById('histPreviewOverlay');
+  if(overlay) overlay.remove();
 }
 
 function renderReport(){
@@ -2426,10 +2528,13 @@ function printPengesahanPerkakasan(lokasiLabel, assetList, useVenueManager){
     table.senarai th{border:1px solid #000; background:#e5e5e5; padding:5px 6px; font-size:9.5px; text-align:left;}
     table.senarai td{border:1px solid #000; padding:5px 6px; font-size:9.5px; vertical-align:top;}
     table.senarai .mono{font-family:'Courier New',monospace;}
-    .pengesahan{display:flex; border:1px solid #000;}
-    .pengesahan > div{flex:1; padding:10px 12px; font-size:9.5px;}
-    .pengesahan > div:first-child{border-right:1px solid #000;}
-    .pengesahan .pg-title{font-weight:bold; margin-bottom:6px;}
+    .pengesahan-top{display:flex; border:1px solid #000; border-bottom:none;}
+    .pengesahan-top > div{flex:1; padding:10px 12px; font-size:9.5px;}
+    .pengesahan-top > div:first-child{border-right:1px solid #000;}
+    .pengesahan-bottom{display:flex; border:1px solid #000;}
+    .pengesahan-bottom > div{width:60%; margin:0 auto; padding:10px 12px; font-size:9.5px; text-align:center;}
+    .pengesahan-bottom .sig-line-row{justify-content:center;}
+    .pg-title{font-weight:bold; margin-bottom:6px;}
     .sig-pen-space{height:28px;}
     .sig-line-row{display:flex; gap:4px; margin-top:8px;}
     .print-bar{text-align:center; margin-bottom:12px;}
@@ -2463,7 +2568,7 @@ function printPengesahanPerkakasan(lokasiLabel, assetList, useVenueManager){
       </tbody>
     </table>
     <div class="section-title">2. PENGESAHAN MAKLUMAT</div>
-    <div class="pengesahan">
+    <div class="pengesahan-top">
       <div>
         <div class="pg-title">PENGESAHAN PEMERIKSA / JURUTEKNIK</div>
         <div>Saya dengan ini mengesahkan bahawa pemeriksaan telah dibuat dan perkakasan berada di lokasi dinyatakan.</div>
@@ -2471,6 +2576,15 @@ function printPengesahanPerkakasan(lokasiLabel, assetList, useVenueManager){
         <div class="sig-line-row"><span>TANDATANGAN:</span><span>………………………………………………</span></div>
         <div class="sig-line-row"><span>TARIKH:</span><span>………………………………………………</span></div>
       </div>
+      <div>
+        <div class="pg-title">PENGESAHAN KETUA UNIT SOKONGAN</div>
+        <div>Saya dengan ini mengesahkan bahawa maklumat perkakasan yang dinyatakan adalah tepat dan sah.</div>
+        <div class="sig-pen-space"></div>
+        <div class="sig-line-row"><span>TANDATANGAN:</span><span>………………………………………………</span></div>
+        <div class="sig-line-row"><span>TARIKH:</span><span>………………………………………………</span></div>
+      </div>
+    </div>
+    <div class="pengesahan-bottom">
       <div>
         <div class="pg-title">${pengesahanKedua.title}</div>
         <div>${pengesahanKedua.desc}</div>
@@ -2487,9 +2601,197 @@ function printPengesahanPerkakasan(lokasiLabel, assetList, useVenueManager){
   w.document.close();
 }
 
+function printBorangLupus(lokasiLabel, assetList){
+  if(!assetList || assetList.length === 0){
+    showToast('Tiada aset berstatus "Permohonan Lupus" untuk kriteria ini.');
+    return;
+  }
+  const rows = assetList.map((a, i) => `
+    <tr>
+      <td style="text-align:center;">${i+1}</td>
+      <td>${escapeHtml(jenisLabel(a)||'-')}</td>
+      <td>${escapeHtml([a.jenama, a.model].filter(Boolean).join(' ') || '-')}</td>
+      <td class="mono">${escapeHtml(a.noSiri||'-')}</td>
+      <td class="mono">${escapeHtml(a.noAset||'-')}</td>
+      <td>${escapeHtml(a.namaPengguna||'-')}</td>
+      <td>${escapeHtml(a.lokasi||'-')}</td>
+      <td>${escapeHtml(a.catatan||'-')}</td>
+    </tr>`).join('');
+  const blankRows = Array.from({length: 3}).map((_, i) => `
+    <tr>
+      <td style="text-align:center;">${assetList.length + i + 1}</td>
+      <td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td>
+    </tr>`).join('');
+
+  const html = `<!DOCTYPE html><html lang="ms"><head><meta charset="UTF-8"><title>Borang Permohonan Lupus - ${escapeHtml(lokasiLabel)}</title>
+  <style>
+    * { box-sizing: border-box; }
+    @page { size: A4; margin: 10mm; }
+    body{font-family:Arial,Helvetica,sans-serif; font-size:10px; color:#000; max-width:190mm; margin:10px auto; padding:0 10px;}
+    .letterhead{display:flex; align-items:center; gap:10px; margin-bottom:8px;}
+    .letterhead img{height:52px; width:52px; object-fit:contain; flex-shrink:0;}
+    .letterhead .titles{flex:1; text-align:center; padding-right:52px;}
+    .doc-title{font-weight:bold; font-size:13px;}
+    table.top{width:100%; border-collapse:collapse; border:1px solid #000; margin-bottom:10px;}
+    table.top td{border:1px solid #000; padding:5px 8px; font-size:10.5px;}
+    .section-title{font-weight:bold; font-size:11px; margin-bottom:5px;}
+    table.senarai{width:100%; border-collapse:collapse; border:1px solid #000; margin-bottom:12px;}
+    table.senarai th{border:1px solid #000; background:#e5e5e5; padding:5px 6px; font-size:9.5px; text-align:left;}
+    table.senarai td{border:1px solid #000; padding:5px 6px; font-size:9.5px; vertical-align:top;}
+    table.senarai .mono{font-family:'Courier New',monospace;}
+    .pengesahan-top{display:flex; border:1px solid #000; border-bottom:none;}
+    .pengesahan-top > div{flex:1; padding:10px 12px; font-size:9.5px;}
+    .pengesahan-top > div:first-child{border-right:1px solid #000;}
+    .pengesahan-bottom{display:flex; border:1px solid #000;}
+    .pengesahan-bottom > div{width:60%; margin:0 auto; padding:10px 12px; font-size:9.5px; text-align:center;}
+    .pengesahan-bottom .sig-line-row{justify-content:center;}
+    .pg-title{font-weight:bold; margin-bottom:6px;}
+    .sig-pen-space{height:28px;}
+    .sig-line-row{display:flex; gap:4px; margin-top:8px;}
+    .print-bar{text-align:center; margin-bottom:12px;}
+    .print-bar button{padding:8px 18px; font-size:13px; cursor:pointer;}
+    @media print{ .print-bar{display:none;} body{margin:0; padding:0;} }
+  </style></head>
+  <body>
+    <div class="print-bar"><button onclick="window.print()">Cetak / Simpan sebagai PDF</button></div>
+    <div class="letterhead">
+      <img src="${MSN_LOGO}" alt="Logo MSN">
+      <div class="titles"><div class="doc-title">BORANG PERMOHONAN PELUPUSAN ASET ICT</div></div>
+    </div>
+    <table class="top">
+      <tr><td><b>BAHAGIAN / VENUE:</b> ${escapeHtml(lokasiLabel)}</td></tr>
+    </table>
+    <div class="section-title">1. SENARAI ASET UNTUK PELUPUSAN</div>
+    <table class="senarai">
+      <thead><tr>
+        <th style="width:4%;">BIL</th>
+        <th style="width:13%;">PERKAKASAN</th>
+        <th style="width:16%;">PERINCIAN</th>
+        <th style="width:13%;">NO. SIRI</th>
+        <th style="width:13%;">NO. ASET</th>
+        <th style="width:14%;">NAMA KAKITANGAN</th>
+        <th style="width:13%;">LOKASI</th>
+        <th style="width:14%;">CATATAN</th>
+      </tr></thead>
+      <tbody>
+        ${rows}
+        ${blankRows}
+      </tbody>
+    </table>
+    <div class="section-title">2. PENGESAHAN MAKLUMAT</div>
+    <div class="pengesahan-top">
+      <div>
+        <div class="pg-title">PENGESAHAN JURUTEKNIK / PEMERIKSA</div>
+        <div>Saya dengan ini mengesahkan bahawa aset dinyatakan telah diperiksa dan disahkan layak untuk pelupusan.</div>
+        <div class="sig-pen-space"></div>
+        <div class="sig-line-row"><span>TANDATANGAN:</span><span>………………………………………………</span></div>
+        <div class="sig-line-row"><span>TARIKH:</span><span>………………………………………………</span></div>
+      </div>
+      <div>
+        <div class="pg-title">PENGESAHAN KETUA CAWANGAN</div>
+        <div>Saya dengan ini mengesahkan bahawa permohonan pelupusan aset dinyatakan adalah wajar dan disokong.</div>
+        <div class="sig-pen-space"></div>
+        <div class="sig-line-row"><span>TANDATANGAN:</span><span>………………………………………………</span></div>
+        <div class="sig-line-row"><span>TARIKH:</span><span>………………………………………………</span></div>
+      </div>
+    </div>
+    <div class="pengesahan-bottom">
+      <div>
+        <div class="pg-title">PENGESAHAN PEGAWAI ASET</div>
+        <div>Saya dengan ini mengesahkan dan meluluskan permohonan pelupusan aset dinyatakan mengikut prosedur pelupusan aset.</div>
+        <div class="sig-pen-space"></div>
+        <div class="sig-line-row"><span>TANDATANGAN:</span><span>………………………………………………</span></div>
+        <div class="sig-line-row"><span>TARIKH:</span><span>………………………………………………</span></div>
+      </div>
+    </div>
+  </body></html>`;
+  const w = window.open('', '_blank');
+  if(!w){ showToast('Pop-up disekat. Benarkan pop-up untuk cetak borang.'); return; }
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
+}
+
+function printStatusHistoryReport(label, historyList){
+  if(!historyList || historyList.length === 0){
+    showToast('Tiada rekod sejarah status untuk kriteria ini.');
+    return;
+  }
+  const rows = historyList.map((h, i) => `
+    <tr>
+      <td style="text-align:center;">${i+1}</td>
+      <td class="mono">${escapeHtml(h.noAset||'-')}</td>
+      <td>${escapeHtml(h.namaPengguna||'-')}</td>
+      <td>${escapeHtml(h.bahagian||'-')}</td>
+      <td>${escapeHtml(h.statusLama||'-')}</td>
+      <td>${escapeHtml(h.statusBaharu||'-')}</td>
+      <td>${escapeHtml(h.penggunaBaru||'-')}</td>
+      <td>${escapeHtml(h.bahagianBaru||'-')}</td>
+      <td>${escapeHtml(h.changedByName||h.changedBy||'-')}</td>
+      <td>${fmtDateTime(h.changedAt)}</td>
+    </tr>`).join('');
+
+  const html = `<!DOCTYPE html><html lang="ms"><head><meta charset="UTF-8"><title>Laporan Status History - ${escapeHtml(label)}</title>
+  <style>
+    * { box-sizing: border-box; }
+    @page { size: A4 landscape; margin: 10mm; }
+    body{font-family:Arial,Helvetica,sans-serif; font-size:10px; color:#000; margin:10px auto; padding:0 10px;}
+    .letterhead{display:flex; align-items:center; gap:10px; margin-bottom:8px;}
+    .letterhead img{height:52px; width:52px; object-fit:contain; flex-shrink:0;}
+    .letterhead .titles{flex:1; text-align:center; padding-right:52px;}
+    .doc-title{font-weight:bold; font-size:13px;}
+    table.top{width:100%; border-collapse:collapse; border:1px solid #000; margin-bottom:10px;}
+    table.top td{border:1px solid #000; padding:5px 8px; font-size:10.5px;}
+    .section-title{font-weight:bold; font-size:11px; margin-bottom:5px;}
+    table.senarai{width:100%; border-collapse:collapse; border:1px solid #000; margin-bottom:12px;}
+    table.senarai th{border:1px solid #000; background:#e5e5e5; padding:5px 6px; font-size:9.5px; text-align:left;}
+    table.senarai td{border:1px solid #000; padding:5px 6px; font-size:9.5px; vertical-align:top;}
+    table.senarai .mono{font-family:'Courier New',monospace;}
+    .print-bar{text-align:center; margin-bottom:12px;}
+    .print-bar button{padding:8px 18px; font-size:13px; cursor:pointer;}
+    .report-meta{font-size:10px; color:#333; margin-bottom:10px;}
+    @media print{ .print-bar{display:none;} body{margin:0; padding:0;} }
+  </style></head>
+  <body>
+    <div class="print-bar"><button onclick="window.print()">Cetak / Simpan sebagai PDF</button></div>
+    <div class="letterhead">
+      <img src="${MSN_LOGO}" alt="Logo MSN">
+      <div class="titles"><div class="doc-title">LAPORAN SEJARAH PERUBAHAN STATUS ASET</div></div>
+    </div>
+    <table class="top">
+      <tr><td><b>TAPISAN:</b> ${escapeHtml(label)}</td></tr>
+    </table>
+    <div class="report-meta">Jumlah rekod: ${historyList.length} &nbsp;|&nbsp; Dijana pada: ${fmtDateTime(new Date())}</div>
+    <table class="senarai">
+      <thead><tr>
+        <th style="width:4%;">BIL</th>
+        <th style="width:11%;">NO. ASET</th>
+        <th style="width:13%;">NAMA KAKITANGAN</th>
+        <th style="width:11%;">BAHAGIAN</th>
+        <th style="width:10%;">STATUS LAMA</th>
+        <th style="width:10%;">STATUS BAHARU</th>
+        <th style="width:11%;">PENGGUNA SEMASA</th>
+        <th style="width:11%;">BAHAGIAN SEMASA</th>
+        <th style="width:10%;">DIUBAH OLEH</th>
+        <th style="width:11%;">TARIKH &amp; MASA</th>
+      </tr></thead>
+      <tbody>
+        ${rows}
+      </tbody>
+    </table>
+  </body></html>`;
+  const w = window.open('', '_blank');
+  if(!w){ showToast('Pop-up disekat. Benarkan pop-up untuk cetak laporan.'); return; }
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
+}
+
 function openForm(asset){
   editingId = asset ? asset.id : null;
-  const a = asset || {noAset:'',noSiri:'',jenisPeralatan:JENIS_OPTIONS[0],jenama:'',model:'',namaPengguna:'',bahagian:'',venue:'',tarikhPenyerahan:'',lokasi:'',syarikatPembekal:'',hargaPerolehan:'',tarikhTerima:'',noBaucar:'',status:'Aktif',catatan:''};
+  const a = asset || {noAset:'',noSiri:'',jenisPeralatan:JENIS_OPTIONS[0],jenama:'',model:'',namaPengguna:'',bahagian:'',venue:'',tarikhPenyerahan:'',lokasi:'',syarikatPembekal:'',hargaPerolehan:'',tarikhTerima:'',noBaucar:'',status:'Aktif',catatan:'',penggunaBaru:'',bahagianBaru:''};
+  if(a.penggunaBaru === undefined) a.penggunaBaru = '';
+  if(a.bahagianBaru === undefined) a.bahagianBaru = '';
   const overlay = document.createElement('div');
   overlay.className = 'overlay';
   overlay.id = 'formOverlay';
@@ -2536,7 +2838,15 @@ function openForm(asset){
 
           <div class="form-section-label">Status semasa</div>
           <div class="field full"><label>Status</label>
-            <select name="status">${STATUS_OPTIONS.map(s=>`<option value="${s}" ${a.status===s?'selected':''}>${s}</option>`).join('')}</select>
+            <select name="status" id="formStatus">${STATUS_OPTIONS.map(s=>`<option value="${s}" ${a.status===s?'selected':''}>${s}</option>`).join('')}</select>
+          </div>
+          <div class="field full" id="penggunaBaruFieldWrap" style="display:none;">
+            <label>Pengguna Semasa</label>
+            <input type="text" name="penggunaBaru" value="${escapeHtml(a.penggunaBaru)}" placeholder="Nama pengguna/entiti semasa yang menerima aset">
+          </div>
+          <div class="field full" id="bahagianBaruFieldWrap" style="display:none;">
+            <label>Bahagian Semasa</label>
+            <select name="bahagianBaru">${BAHAGIAN_OPTIONS.map(b=>`<option value="${escapeHtml(b)}" ${a.bahagianBaru===b?'selected':''}>${escapeHtml(b)}</option>`).join('')}</select>
           </div>
           <div class="field full"><label>Catatan</label><textarea name="catatan" placeholder="Nota tambahan (pilihan)">${escapeHtml(a.catatan)}</textarea></div>
         </div>
@@ -2576,6 +2886,23 @@ function openForm(asset){
   }
   bahagianSelect.addEventListener('change', toggleVenueField);
   toggleVenueField(); // Run on form load to set initial state
+
+  const statusSelect = document.getElementById('formStatus');
+  const penggunaBaruWrap = document.getElementById('penggunaBaruFieldWrap');
+  const bahagianBaruWrap = document.getElementById('bahagianBaruFieldWrap');
+  const penggunaBaruInput = document.querySelector('input[name="penggunaBaru"]');
+  const bahagianBaruSelect = document.querySelector('select[name="bahagianBaru"]');
+  function togglePenggunaBaru(){
+    const isDipindah = statusSelect.value === 'Dipindah Milik';
+    penggunaBaruWrap.style.display = isDipindah ? 'block' : 'none';
+    bahagianBaruWrap.style.display = isDipindah ? 'block' : 'none';
+    if(!isDipindah) {
+      penggunaBaruInput.value = '';
+      bahagianBaruSelect.value = '';
+    }
+  }
+  statusSelect.addEventListener('change', togglePenggunaBaru);
+  togglePenggunaBaru(); // Run on form load
 }
 
 function closeForm(){
@@ -2621,8 +2948,11 @@ async function handleFormSubmit(e){
             noAset: data.noAset || (existingAsset ? existingAsset.noAset : ''),
             assetId: editingId,
             namaPengguna: data.namaPengguna || '',
+            bahagian: data.bahagian || (existingAsset ? existingAsset.bahagian : '') || '',
             statusLama: oldStatus,
             statusBaharu: newStatus,
+            penggunaBaru: newStatus === 'Dipindah Milik' ? (data.penggunaBaru || '') : '',
+            bahagianBaru: newStatus === 'Dipindah Milik' ? (data.bahagianBaru || '') : '',
             changedBy: currentUser ? currentUser.username : '',
             changedByName: currentUser ? currentUser.namaPenuh : '',
             changedAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -2631,6 +2961,34 @@ async function handleFormSubmit(e){
           console.error('Gagal rekod sejarah status:', logErr);
         }
       }
+
+      // Option A: Segerak semula rekod StatusHistory sedia ada dengan butiran terkini aset
+      // (nama pengguna, bahagian, pengguna semasa, bahagian semasa) apabila aset diedit.
+      try{
+        const relatedHistory = statusHistory.filter(h => h.assetId === editingId);
+        if(relatedHistory.length > 0){
+          const syncNoAset = data.noAset || (existingAsset ? existingAsset.noAset : '') || '';
+          const syncNama = data.namaPengguna || '';
+          const syncBahagian = data.bahagian || '';
+          const syncPenggunaSemasa = data.status === 'Dipindah Milik' ? (data.penggunaBaru || '') : '';
+          const syncBahagianSemasa = data.status === 'Dipindah Milik' ? (data.bahagianBaru || '') : '';
+          const batch = db.batch();
+          relatedHistory.forEach(h => {
+            const ref = statusHistoryCollection.doc(h.id);
+            batch.update(ref, {
+              noAset: syncNoAset,
+              namaPengguna: syncNama,
+              bahagian: syncBahagian,
+              penggunaBaru: syncPenggunaSemasa,
+              bahagianBaru: syncBahagianSemasa
+            });
+          });
+          await batch.commit();
+        }
+      }catch(syncErr){
+        console.error('Gagal segerak rekod sejarah status:', syncErr);
+      }
+
       showToast('Aset dikemaskini.');
     } else {
       if(currentUser){
@@ -3105,6 +3463,61 @@ function attachViewHandlers(){
     printPengesahanPerkakasan(label, filtered, useVenueManager);
   };
 
+  // Jana Laporan Status History
+  const histReportBahagian = document.getElementById('histReportBahagian');
+  const histReportVenue = document.getElementById('histReportVenue');
+  const histReportStatus = document.getElementById('histReportStatus');
+  if(histReportBahagian && histReportVenue){
+    histReportBahagian.onchange = () => {
+      const isFasiliti = histReportBahagian.value === 'FASILITI';
+      histReportVenue.style.display = isFasiliti ? '' : 'none';
+      if(!isFasiliti) histReportVenue.value = 'all';
+    };
+  }
+  const btnGenerateHistReport = document.getElementById('btnGenerateHistReport');
+  if(btnGenerateHistReport) btnGenerateHistReport.onclick = () => {
+    const bahagian = histReportBahagian.value;
+    const venue = histReportVenue.value;
+    const status = histReportStatus.value;
+    let filtered = statusHistory.slice();
+    if(bahagian !== 'all') filtered = filtered.filter(h => h.bahagian === bahagian);
+    if(bahagian === 'FASILITI' && venue !== 'all'){
+      // Match venue via the asset's current venue (history stores bahagian; cross-ref asset for venue)
+      const venueAssetIds = new Set(assets.filter(a => a.venue === venue).map(a => a.id));
+      filtered = filtered.filter(h => venueAssetIds.has(h.assetId));
+    }
+    if(status !== 'all') filtered = filtered.filter(h => h.statusBaharu === status);
+
+    const labelParts = [];
+    labelParts.push(bahagian === 'all' ? 'Semua Bahagian' : bahagian);
+    if(bahagian === 'FASILITI' && venue !== 'all') labelParts.push(venue);
+    labelParts.push(status === 'all' ? 'Semua Status' : 'Status: ' + status);
+    printStatusHistoryReport(labelParts.join(' — '), filtered);
+  };
+
+  // Jana Borang Permohonan Lupus
+  const lupusBahagianSelect = document.getElementById('lupusBahagianSelect');
+  const lupusVenueSelect = document.getElementById('lupusVenueSelect');
+  if(lupusBahagianSelect && lupusVenueSelect){
+    lupusBahagianSelect.onchange = () => {
+      const isFasiliti = lupusBahagianSelect.value === 'FASILITI';
+      lupusVenueSelect.style.display = isFasiliti ? '' : 'none';
+      if(!isFasiliti) lupusVenueSelect.value = 'all';
+    };
+  }
+  const btnGenerateLupusForm = document.getElementById('btnGenerateLupusForm');
+  if(btnGenerateLupusForm) btnGenerateLupusForm.onclick = () => {
+    const bahagian = lupusBahagianSelect.value;
+    const venue = lupusVenueSelect.value;
+    // Hanya aset berstatus "Permohonan Lupus"
+    let filtered = assets.filter(a => a.status === 'Permohonan Lupus');
+    if(bahagian !== 'all') filtered = filtered.filter(a => a.bahagian === bahagian);
+    if(bahagian === 'FASILITI' && venue !== 'all') filtered = filtered.filter(a => a.venue === venue);
+
+    const label = bahagian === 'all' ? 'Semua Bahagian' : bahagian + (bahagian === 'FASILITI' && venue !== 'all' ? ' — ' + venue : '');
+    printBorangLupus(label, filtered);
+  };
+
   document.querySelectorAll('[data-print-maint]').forEach(btn=>{
     btn.onclick = () => printMaintenance(maintenanceRecords.find(x=>x.id===btn.dataset.printMaint));
   });
@@ -3180,6 +3593,13 @@ function attachViewHandlers(){
       }
     };
   }
+  const shFilterBahagian = document.getElementById('statusHistoryFilterBahagian');
+  if(shFilterBahagian) shFilterBahagian.onchange = () => { statusHistoryFilterBahagian = shFilterBahagian.value; render(); };
+  const shFilterStatus = document.getElementById('statusHistoryFilterStatus');
+  if(shFilterStatus) shFilterStatus.onchange = () => { statusHistoryFilterStatus = shFilterStatus.value; render(); };
+  document.querySelectorAll('[data-hist-preview]').forEach(btn=>{
+    btn.onclick = () => openStatusHistoryPreview(btn.dataset.histPreview);
+  });
   const fJenis = document.getElementById('filterJenis');
   if(fJenis) fJenis.onchange = () => { filterJenis = fJenis.value; currentPage = 1; render(); };
   const fBahagian = document.getElementById('filterBahagian');
